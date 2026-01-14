@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-import 'splash_screen.dart';  // 새로 생성
+import 'screen/splash_screen.dart';  // 새로 생성
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
