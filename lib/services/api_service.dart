@@ -51,5 +51,6 @@ class ApiService {
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear(); // 모든 저장 데이터 삭제
+
   }
 }
