@@ -17,8 +17,6 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initAndNavigate() async {
-    // 1. 필요한 초기화 작업 (키 해시 확인 등)
-    await AuthService.printKeyHash();
 
     // 2. 최소 로딩 시간 보장 (스플래시 애니메이션 감상용)
     await Future.delayed(Duration(seconds: 2));

@@ -3,10 +3,45 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'api_service.dart';
 
 class AuthService {
-  // 1. 카카오 키 해시 확인 (디버그용)
-  static Future<void> printKeyHash() async {
-    final keyHash = await KakaoSdk.origin;
-    print('🔥 Kakao KeyHash: $keyHash');
+  // 1. 카카오 로그인 및 서버 연동 로직
+  static Future<dynamic> handleKakaoLogin() async {
+    try {
+      // 카카오 토큰 획득
+      OAuthToken token = await isKakaoTalkInstalled()
+          ? await UserApi.instance.loginWithKakaoTalk()
+          : await UserApi.instance.loginWithKakaoAccount();
+
+      // [중요] 백엔드 서버에 로그인 요청 (여기서 403이나 404가 발생할 수 있음)
+      final response = await ApiService.loginWithKakao(token.accessToken);
+
+      if (response != null && response['accessToken'] != null) {
+        // [CASE 1] 기존 회원: 즉시 로그인 처리 및 정보 저장
+        await _saveAuthData(response);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      // [CASE 2] 신규 회원: 404 에러가 던져졌을 때 처리 (ApiService에서 404 처리 방식에 따라 다름)
+      if (e.toString().contains('404')) {
+        print('신규 회원 발견: 회원가입 페이지로 이동 필요');
+        return 'NEW_USER';
+      }
+
+      // [CASE 3] 403 Forbidden 등 권한 에러
+      print('Kakao Login Error: $e');
+      rethrow; // 에러를 위로 던져 UI에서 알림을 띄우게 함
+    }
+  }
+
+  // 데이터 저장 로직 분리 (Clean Architecture - Data Source)
+  static Future<void> _saveAuthData(Map<String, dynamic> data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('accessToken', data['accessToken']);
+    await prefs.setString('refreshToken', data['refreshToken']);
+    await prefs.setInt('userId', data['userId']);
+    final profile = await ApiService.fetchUserProfile(prefs.getString('accessToken') as String);
+    // 만약 서버에서 닉네임도 같이 준다면 저장
+    await prefs.setString('nickname', profile['nickname']);
   }
 
   // 2. 로그인 상태 확인 (스플래시 화면용)
@@ -16,42 +51,9 @@ class AuthService {
     return accessToken != null && accessToken.isNotEmpty;
   }
 
-  // 3. 카카오 로그인 및 서버 연동 로직 (로그인 화면용)
-  static Future<bool> handleKakaoLogin() async {
-    try {
-      // 카카오톡 설치 여부에 따라 로그인 방식 선택
-      OAuthToken token = await isKakaoTalkInstalled()
-          ? await UserApi.instance.loginWithKakaoTalk()
-          : await UserApi.instance.loginWithKakaoAccount();
-
-      // 우리 백엔드 서버에 로그인 요청
-      final userData = await ApiService.loginWithKakao(token.accessToken);
-
-      // 서버에서 받은 정보를 로컬에 저장
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('accessToken', userData['accessToken']);
-      await prefs.setString('refreshToken', userData['refreshToken']);
-      await prefs.setInt('userId', userData['userId']);
-
-      return true;
-    } catch (e) {
-      print('Kakao Login Error: $e');
-      return false;
-    }
-  }
-
-  // 4. 로그아웃 (메인 화면용)
+  // 3. 로그아웃
   static Future<void> logout() async {
-    try {
-      // 카카오 로그아웃 (선택사항: 카카오 세션도 끊고 싶을 때)
-      // await UserApi.instance.logout();
-
-      // 로컬 저장소 데이터 삭제
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
-      print('로그아웃 완료: 모든 토큰 삭제됨');
-    } catch (e) {
-      print('Logout Error: $e');
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
   }
 }
