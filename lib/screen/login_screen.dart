@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import 'package:frontend/services/auth/auth_kakao.dart';
+import '../services/auth/auth_common.dart';
 import 'main_screen.dart';
 import 'signup_screen.dart';
 import 'pwfind_screen.dart';
@@ -12,10 +13,21 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _isLoggingIn = false;
 
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
   // 디자인 가이드 색상
   final Color _brandColor = const Color(0xFF4E342E); // 짙은 브라운
   final Color _kakaoColor = const Color(0xFFFEE500); // 카카오 노란색
   final Color _backgroundColor = const Color(0xFFF9F5F2); // 연한 베이지 배경
+
+  @override
+  void dispose() {
+    // 메모리 누수 방지를 위해 컨트롤러 해제
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 50),
 
               // EMAIL 입력창
-              _buildInputField(label: 'EMAIL', hint: 'oakey@email.com'),
+              _buildInputField(label: 'EMAIL', hint: 'oakey@email.com', controller: _emailController),
               const SizedBox(height: 20),
 
               // PASSWORD 입력창
-              _buildInputField(label: 'PASSWORD', hint: '', isPassword: true),
+              _buildInputField(label: 'PASSWORD', hint: '', isPassword: true, controller: _passwordController),
               const SizedBox(height: 40),
 
               // 일반 로그인 버튼
@@ -63,9 +75,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 text: '로그인',
                 color: _brandColor,
                 textColor: Colors.white,
-                onPressed: () {
-                  // 일반 로그인 로직 (필요시 구현)
-                },
+                onPressed: _onEmailLoginPressed,
               ),
               const SizedBox(height: 15),
 
@@ -113,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // 공통 입력 필드 위젯
-  Widget _buildInputField({required String label, required String hint, bool isPassword = false}) {
+  Widget _buildInputField({required String label, required String hint, bool isPassword = false, required TextEditingController controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -136,6 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           child: TextField(
             obscureText: isPassword,
+            controller: controller,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: const TextStyle(color: Colors.grey),
@@ -199,7 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoggingIn = true);
 
     try {
-      final success = await AuthService.handleKakaoLogin();
+      final success = await AuthKakao.handleKakaoLogin();
 
       if (success) {
         if (!mounted) return;
@@ -209,6 +220,41 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         // 실제로는 여기서 404 에러 등을 체크하여 ProfileScreen으로 넘겨야 함
         // 예: Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(token: ...)));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoggingIn = false);
+    }
+  }
+
+  // 이메일 로그인 로직 함수 추가
+  Future<void> _onEmailLoginPressed() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('이메일과 비밀번호를 모두 입력해주세요.')),
+      );
+      return;
+    }
+
+    setState(() => _isLoggingIn = true);
+
+    try {
+      // 2. AuthService의 로그인 메서드 호출
+      final success = await AuthService.handleEmailLogin(
+        email: _emailController.text,
+        password: _passwordController.text,
+      );
+
+      if (success && mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('로그인 실패: ${e.toString()}')),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);

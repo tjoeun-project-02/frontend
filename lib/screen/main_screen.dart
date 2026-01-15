@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../widgets/main_bottom_nav.dart';
+import '../services/auth/auth_common.dart';
+import '../widgets/oakey_bottom_bar.dart';
 import 'login_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -71,7 +71,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       // 공통 하단바 적용
-      bottomNavigationBar: MainBottomNav(
+      bottomNavigationBar: OakeyBottomBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() => _currentIndex = index),
       ),
@@ -93,7 +93,7 @@ class _MainScreenState extends State<MainScreen> {
           suffixIcon: IconButton(
             icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF8D776D)),
             onPressed: () {
-              ApiService.logout();
+              AuthService.logout();
               if (!mounted) return;
 
               // 2. 로그인 페이지로 이동하며 이전 스택 모두 제거
