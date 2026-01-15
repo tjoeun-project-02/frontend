@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'screen/splash_screen.dart';  // 스플래시 화면
+import 'screen/main_screen.dart';
 import 'Directory/core/theme.dart';
 
 void main() async {
@@ -32,7 +33,7 @@ class MyApp extends StatelessWidget {
       theme: OakeyTheme.lightTheme,
 
       // theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: SplashScreen(),  // 스플래시로 변경
+      home: MainScreen(),  // 스플래시로 변경
     );
   }
 }
