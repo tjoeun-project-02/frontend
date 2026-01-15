@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
-import 'screen/splash_screen.dart';  // 새로 생성
+import 'screen/splash_screen.dart';  // 스플래시 화면
+import 'Directory/core/theme.dart';
 
 void main() async {
+  // 플러터 엔진 초기화 확인
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 환경 변수 (.env) 로드
   await dotenv.load(fileName: 'assets/config/.env');
 
+  // 카카오 SDK 초기화 (보안을 위해 .env 값 사용)
   KakaoSdk.init(
-    nativeAppKey: dotenv.env['KAKAO_NATIVE_KEY']!,  // .env에서 불러오기 (보안 강화)
+    nativeAppKey: dotenv.env['KAKAO_NATIVE_KEY']!,
     javaScriptAppKey: dotenv.env['KAKAO_JS_KEY']!,
   );
   runApp(MyApp());
@@ -16,11 +21,17 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // 디버그 배너 숨김
+      debugShowCheckedModeBanner: false,
       title: 'Oakey',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
+
+      theme: OakeyTheme.lightTheme,
+
+      // theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
       home: SplashScreen(),  // 스플래시로 변경
     );
   }
