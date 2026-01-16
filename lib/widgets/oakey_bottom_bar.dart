@@ -55,7 +55,7 @@ class OakeyBottomBar extends StatelessWidget {
           BottomNavigationBarItem(
             icon: Icon(Icons.lightbulb_outline, size: 24),
             activeIcon: Icon(Icons.lightbulb, size: 24),
-            label: 'RECOMMEND',
+            label: 'PICK',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline, size: 24),
