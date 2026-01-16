@@ -1,6 +1,6 @@
 // lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
+import '../services/auth/auth_common.dart';
 import 'login_screen.dart';
 import 'main_screen.dart';
 

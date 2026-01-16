@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../services/auth/auth_common.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -8,6 +10,13 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _emailController = TextEditingController();
+  final _nicknameController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  final _nameController = TextEditingController(); // userName 필드용
+
+  bool isLoading = false;
   final Color _brandColor = const Color(0xFF4E342E); // 짙은 브라운
   final Color _subColor = const Color(0xFF8D776D);   // 인증 버튼 색상
   final Color _backgroundColor = const Color(0xFFF9F5F2);
@@ -43,18 +52,19 @@ class _SignupScreenState extends State<SignupScreen> {
             Row(
               children: [
                 Expanded(
-                  child: _buildTextField(hint: 'oakey@email.com'),
+                  child: _buildTextField(hint: 'oakey@email.com', controller: _emailController),
                 ),
                 const SizedBox(width: 10),
                 SizedBox(
-                  height: 55,
+                  width: 100, // 버튼의 가로 길이를 명확히 지정
+                  height: 55,  // 텍스트 필드 높이와 맞춤
                   child: ElevatedButton(
-                    onPressed: () {}, // 이메일 인증 로직
+                    onPressed: () {},
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _subColor,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
-                    child: const Text('인증 하기', style: TextStyle(color: Colors.white)),
+                    child: const Text('인증 하기', style: TextStyle(color: Colors.white, fontSize: 13)),
                   ),
                 ),
               ],
@@ -62,15 +72,15 @@ class _SignupScreenState extends State<SignupScreen> {
             const SizedBox(height: 20),
 
             // NICKNAME 섹션
-            _buildLabelTextField(label: 'NICKNAME', hint: '닉네임을 입력하세요'),
+            _buildLabelTextField(label: 'NICKNAME', hint: '닉네임을 입력하세요', controller: _nicknameController),
             const SizedBox(height: 20),
 
             // PASSWORD 섹션
-            _buildLabelTextField(label: 'PASSWORD', hint: '비밀번호를 입력하세요', isPassword: true),
+            _buildLabelTextField(label: 'PASSWORD', hint: '비밀번호를 입력하세요', isPassword: true, controller: _passwordController),
             const SizedBox(height: 20),
 
             // CONFIRM PASSWORD 섹션
-            _buildLabelTextField(label: 'CONFIRM PASSWORD', hint: '위 비밀번호와 동일하게 입력하세요', isPassword: true),
+            _buildLabelTextField(label: 'CONFIRM PASSWORD', hint: '위 비밀번호와 동일하게 입력하세요', isPassword: true, controller: _confirmPasswordController),
 
             const SizedBox(height: 50),
 
@@ -79,7 +89,7 @@ class _SignupScreenState extends State<SignupScreen> {
               width: double.infinity,
               height: 60,
               child: ElevatedButton(
-                onPressed: () {}, // 회원가입 완료 로직
+                onPressed: isLoading ? null : _onSignupPressed, // 회원가입 완료 로직
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _brandColor,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -98,19 +108,19 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   // 라벨이 포함된 텍스트 필드 빌더
-  Widget _buildLabelTextField({required String label, required String hint, bool isPassword = false}) {
+  Widget _buildLabelTextField({required String label, required String hint, bool isPassword = false, required TextEditingController? controller}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
         const SizedBox(height: 8),
-        _buildTextField(hint: hint, isPassword: isPassword),
+        _buildTextField(hint: hint, isPassword: isPassword, controller: controller),
       ],
     );
   }
 
   // 공통 텍스트 필드 스타일
-  Widget _buildTextField({required String hint, bool isPassword = false}) {
+  Widget _buildTextField({required String hint, bool isPassword = false, required TextEditingController? controller}) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -124,6 +134,7 @@ class _SignupScreenState extends State<SignupScreen> {
         ],
       ),
       child: TextField(
+        controller: controller,
         obscureText: isPassword,
         decoration: InputDecoration(
           hintText: hint,
@@ -140,5 +151,39 @@ class _SignupScreenState extends State<SignupScreen> {
         ),
       ),
     );
+  }
+  Future<void> _onSignupPressed() async {
+    // 1. 기본 유효성 검사
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      final success = await AuthService.handleEmailSignup(
+        email: _emailController.text,
+        password: _passwordController.text,
+        nickname: _nicknameController.text,
+      );
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해 주세요.')),
+        );
+        Navigator.pop(context); // 로그인 화면으로 이동
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
   }
 }

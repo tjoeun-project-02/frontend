@@ -66,7 +66,7 @@ class _PwfindScreenState extends State<PwfindScreen> {
 
             const SizedBox(height: 50),
 
-            // 가입하기 버튼
+            // 재설정 버튼
             SizedBox(
               width: double.infinity,
               height: 60,
