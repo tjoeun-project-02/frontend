@@ -10,7 +10,6 @@ class WhiskyListScreen extends StatefulWidget {
 }
 
 class _WhiskyListScreenState extends State<WhiskyListScreen> {
-  int _currentIndex = 1; // 하단 바 활성화 상태
   Set<String> selectedFilters = {}; // 선택 필터 저장소
 
   // 목업 데이터 (isFavorite 상태 포함)

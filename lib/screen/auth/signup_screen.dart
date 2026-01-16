@@ -14,7 +14,6 @@ class _SignupScreenState extends State<SignupScreen> {
   final _nicknameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _nameController = TextEditingController(); // userName 필드용
 
   bool isLoading = false;
   final Color _brandColor = const Color(0xFF4E342E); // 짙은 브라운

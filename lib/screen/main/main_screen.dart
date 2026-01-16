@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/controller/survey_controller.dart';
+import 'package:frontend/screen/mypage/mypage_screen.dart';
 import 'package:frontend/screen/recommend/survey_screen.dart';
 import 'package:frontend/screen/list/whisky_list_screen.dart';
 import 'package:get/get.dart';
@@ -21,7 +22,7 @@ class MainScreen extends StatelessWidget {
       _buildHomeBody(),         // 인덱스 0: 홈 (기존 UI)
       const WhiskyListScreen(), // 인덱스 1
       const SurveyScreen(),      // 인덱스 2: 설문조사 (추천)
-      const Center(child: Text("마이페이지")),   // 인덱스 3
+      const MyPage(),   // 인덱스 3
     ];
 
     return Scaffold(
