@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_components.dart';
+// ✅ 1. 반드시 이 import가 있어야 WhiskyListCard를 인식합니다.
+import '../../widgets/whisky_card.dart';
+import 'whisky_detail_screen.dart';
 
 class WhiskyListScreen extends StatefulWidget {
   const WhiskyListScreen({super.key});
@@ -10,9 +13,8 @@ class WhiskyListScreen extends StatefulWidget {
 }
 
 class _WhiskyListScreenState extends State<WhiskyListScreen> {
-  Set<String> selectedFilters = {}; // 선택 필터 저장소
+  Set<String> selectedFilters = {};
 
-  // 목업 데이터 (isFavorite 상태 포함)
   final List<Map<String, dynamic>> whiskies = [
     {
       'id': '1',
@@ -32,7 +34,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     },
   ];
 
-  // ID 기반 좋아요 토글 함수
   void _toggleFavoriteById(String id) {
     setState(() {
       final idx = whiskies.indexWhere((w) => w['id'] == id);
@@ -54,17 +55,26 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
       ),
       body: Column(
         children: [
-          _buildSearchBar(), // 검색창 호출
-          _buildFixedFilterArea(), // 필터 영역 호출
+          _buildSearchBar(),
+          _buildFixedFilterArea(),
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               itemCount: whiskies.length,
               itemBuilder: (context, index) {
                 final whisky = whiskies[index];
-                return _WhiskyListCard(
-                  data: whisky,
-                  onFavoriteTap: () => _toggleFavoriteById(whisky['id']),
+
+                return WhiskyListCard(
+                  whisky: whisky,
+                  onFavoriteTap: () =>
+                      _toggleFavoriteById(whisky['id'] as String),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          WhiskyDetailScreen(whiskyData: whisky),
+                    ),
+                  ),
                 );
               },
             ),
@@ -74,7 +84,33 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 필터 버튼 고정 및 태그 스크롤 영역
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Container(
+        decoration: BoxDecoration(boxShadow: OakeyTheme.cardShadow),
+        child: TextField(
+          decoration: InputDecoration(
+            hintText: '검색어를 입력하세요',
+            prefixIcon: const Icon(Icons.search, color: OakeyTheme.textHint),
+            suffixIcon: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5DCD3),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: OakeyTheme.primarySoft,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildFixedFilterArea() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 10, 0, 20),
@@ -97,7 +133,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 필터 모달 창 호출
   void _showFilterModal() {
     showModalBottomSheet(
       context: context,
@@ -158,7 +193,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 모달 내부 필터 선택 섹션
   Widget _buildModalSection(
     String title,
     List<String> options,
@@ -218,7 +252,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 모달 하단 버튼 영역
   Widget _buildModalActionButtons(Function setModalState) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
@@ -251,7 +284,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 필터 실행 버튼
   Widget _buildFilterTrigger() {
     return GestureDetector(
       onTap: _showFilterModal,
@@ -278,7 +310,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // 선택된 필터 태그
   Widget _buildSelectedChip(String label) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
@@ -299,162 +330,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
             child: const Icon(Icons.close, size: 14, color: OakeyTheme.textSub),
           ),
         ],
-      ),
-    );
-  }
-
-  // 검색바 영역
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Container(
-        decoration: BoxDecoration(boxShadow: OakeyTheme.cardShadow),
-        child: TextField(
-          decoration: InputDecoration(
-            hintText: '검색어를 입력하세요',
-            prefixIcon: const Icon(Icons.search, color: OakeyTheme.textHint),
-            suffixIcon: Container(
-              margin: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: const Color(0xFFE5DCD3),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: OakeyTheme.primarySoft,
-                size: 20,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// 개별 위스키 정보 표시 카드 (최적화 버전)
-class _WhiskyListCard extends StatelessWidget {
-  final Map<String, dynamic> data;
-  final VoidCallback onFavoriteTap;
-
-  const _WhiskyListCard({required this.data, required this.onFavoriteTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: OakeyTheme.cardShadow,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 이미지 영역 (정중앙 배치 추가)
-          Container(
-            width: 90,
-            height: 90,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1EAE4),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.liquor,
-              size: 40,
-              color: OakeyTheme.primarySoft,
-            ),
-          ),
-          const SizedBox(width: 16),
-          // 정보 영역 (오버플로우 방지)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      data['region'],
-                      style: const TextStyle(
-                        color: OakeyTheme.textHint,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    // 터치 영역 및 정렬 최적화
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      visualDensity: VisualDensity.compact,
-                      onPressed: onFavoriteTap,
-                      icon: Icon(
-                        data['isFavorite']
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        color: data['isFavorite']
-                            ? Colors.red
-                            : OakeyTheme.textHint,
-                        size: 22,
-                      ),
-                    ),
-                  ],
-                ),
-                // 이름 말줄임표 처리 필수
-                Text(
-                  data['name'],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: OakeyTheme.textMain,
-                  ),
-                ),
-                Text(
-                  data['engName'],
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: OakeyTheme.textHint,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                // 태그 줄바꿈 자동 처리
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  children: (data['tags'] as List)
-                      .map((tag) => _buildSmallTag(tag.toString()))
-                      .toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // 소형 태그 위젯 (디자인 시안 최적화)
-  Widget _buildSmallTag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: OakeyTheme.accentOrange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: 11,
-          color: OakeyTheme.accentOrange,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
