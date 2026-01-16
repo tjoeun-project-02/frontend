@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Directory/core/theme.dart'; // [테마]: 전역 스타일 경로
+import '../Directory/core/theme.dart';
 import '../widgets/oakey_components.dart';
 import '../widgets/oakey_bottom_bar.dart';
 
@@ -11,8 +11,38 @@ class WhiskyListScreen extends StatefulWidget {
 }
 
 class _WhiskyListScreenState extends State<WhiskyListScreen> {
-  int _currentIndex = 1; // [상태]: 리스트 탭 활성화
-  Set<String> selectedFilters = {}; // [상태]: 선택된 필터 저장소
+  int _currentIndex = 1; // 하단 바 활성화 상태
+  Set<String> selectedFilters = {}; // 선택 필터 저장소
+
+  // 목업 데이터 (isFavorite 상태 포함)
+  final List<Map<String, dynamic>> whiskies = [
+    {
+      'id': '1',
+      'region': 'SPEYSIDE',
+      'name': '발베니 12년 더블우드',
+      'engName': 'The Balvenie 12Y',
+      'isFavorite': false,
+      'tags': ['Honey', 'Vanilla', 'Sweet'],
+    },
+    {
+      'id': '2',
+      'region': 'HIGHLAND',
+      'name': '맥캘란 12년 쉐리오크',
+      'engName': 'Macallan 12Y Sherry Oak',
+      'isFavorite': true,
+      'tags': ['Dried Fruit', 'Spice'],
+    },
+  ];
+
+  // ID 기반 좋아요 토글 함수
+  void _toggleFavoriteById(String id) {
+    setState(() {
+      final idx = whiskies.indexWhere((w) => w['id'] == id);
+      if (idx != -1) {
+        whiskies[idx]['isFavorite'] = !(whiskies[idx]['isFavorite'] as bool);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,14 +56,19 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
       ),
       body: Column(
         children: [
-          _buildSearchBar(), // [상단]: 검색창 영역
-          _buildFixedFilterArea(), // [중단]: 고정 필터 버튼 + 스크롤 태그 영역
+          _buildSearchBar(), // 검색창 호출
+          _buildFixedFilterArea(), // 필터 영역 호출
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: 5,
-              itemBuilder: (context, index) =>
-                  const _WhiskyListCard(), // [하단]: 상세 카드 리스트
+              itemCount: whiskies.length,
+              itemBuilder: (context, index) {
+                final whisky = whiskies[index];
+                return _WhiskyListCard(
+                  data: whisky,
+                  onFavoriteTap: () => _toggleFavoriteById(whisky['id']),
+                );
+              },
             ),
           ),
         ],
@@ -45,21 +80,15 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // [레이아웃]: 필터 버튼은 고정하고 태그만 스크롤되는 영역
+  // 필터 버튼 고정 및 태그 스크롤 영역
   Widget _buildFixedFilterArea() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        10,
-        0,
-        20,
-      ), // 우측 패딩은 0으로 설정 (스크롤 밀착)
+      padding: const EdgeInsets.fromLTRB(20, 10, 0, 20),
       child: Row(
         children: [
-          _buildFilterTrigger(), // [고정]: 필터 버튼은 Row의 첫 번째 자식으로 고정
+          _buildFilterTrigger(),
           const SizedBox(width: 10),
           Expanded(
-            // [스크롤]: 나머지 공간에서 태그들만 가로 스크롤
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -74,59 +103,7 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // [부품]: 필터 모달을 여는 갈색 버튼
-  Widget _buildFilterTrigger() {
-    return GestureDetector(
-      onTap: _showFilterModal,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: OakeyTheme.primaryDeep,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.tune, color: Colors.white, size: 16),
-            SizedBox(width: 6),
-            Text(
-              '필터',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // [부품]: 선택된 필터 태그 (X 버튼 포함)
-  Widget _buildSelectedChip(String label) {
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: const Color(0xFFE5DCD3),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: 13, color: OakeyTheme.textMain),
-          ),
-          const SizedBox(width: 6),
-          GestureDetector(
-            onTap: () => setState(() => selectedFilters.remove(label)),
-            child: const Icon(Icons.close, size: 14, color: OakeyTheme.textSub),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // [기능]: 필터 모달 (디자인 코드 포함)
+  // 필터 모달 창 호출
   void _showFilterModal() {
     showModalBottomSheet(
       context: context,
@@ -187,8 +164,7 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // [모달부품]: 섹션 타이틀 및 칩 나열
-  // [수정된 모달 섹션]: 필터 선택 칩 스타일 변경
+  // 모달 내부 필터 선택 섹션
   Widget _buildModalSection(
     String title,
     List<String> options,
@@ -202,7 +178,7 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: OakeyTheme.textSub, // 섹션 타이틀 색상
+            color: OakeyTheme.textSub,
           ),
         ),
         const SizedBox(height: 16),
@@ -218,27 +194,24 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
                       ? selectedFilters.remove(option)
                       : selectedFilters.add(option);
                 });
-                setModalState(() {}); // 모달 내부 UI 즉시 갱신
+                setModalState(() {});
               },
               child: Container(
-                // [크기]: 버튼 Medium 사이즈 느낌을 위해 패딩 설정
                 padding: const EdgeInsets.symmetric(
                   horizontal: 20,
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  // [배경색]: 선택 안됐을 때 #f5f5f5, 선택 시 딥브라운
                   color: isSelected
                       ? OakeyTheme.primaryDeep
                       : const Color(0xFFF5F5F5),
-                  borderRadius: BorderRadius.circular(12), // 둥근 모서리
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
                   option,
                   style: TextStyle(
-                    fontSize: 14, // Medium 사이즈 폰트
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    // [글자색]: 선택 안됐을 때 textSub, 선택 시 화이트
                     color: isSelected ? Colors.white : OakeyTheme.textSub,
                   ),
                 ),
@@ -251,20 +224,18 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // [수정된 모달 하단 버튼]: 초기화 버튼 스타일 변경
-  // [수정된 모달 하단 버튼]: 우리가 만든 OakeyButton 전역 스타일 적용
+  // 모달 하단 버튼 영역
   Widget _buildModalActionButtons(Function setModalState) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
       child: Row(
         children: [
-          // 1. 초기화 버튼: 연베이지 배경 + 브라운 글씨 스타일
           Expanded(
             flex: 1,
             child: OakeyButton(
               text: '초기화',
-              type: OakeyButtonType.secondary, // 우리가 정의한 연베이지 스타일
-              size: OakeyButtonSize.large, // 높이 58px 대형 사이즈
+              type: OakeyButtonType.secondary,
+              size: OakeyButtonSize.large,
               onPressed: () {
                 setState(() => selectedFilters.clear());
                 setModalState(() {});
@@ -272,13 +243,12 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
             ),
           ),
           const SizedBox(width: 12),
-          // 2. 찾아 보기 버튼: 딥브라운 배경 + 화이트 글씨 스타일
           Expanded(
             flex: 2,
             child: OakeyButton(
               text: '검색',
-              type: OakeyButtonType.primary, // 우리가 정의한 딥브라운 스타일
-              size: OakeyButtonSize.large, // 동일한 높이 58px
+              type: OakeyButtonType.primary,
+              size: OakeyButtonSize.large,
               onPressed: () => Navigator.pop(context),
             ),
           ),
@@ -287,7 +257,59 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
     );
   }
 
-  // [부품]: 상단 검색바
+  // 필터 실행 버튼
+  Widget _buildFilterTrigger() {
+    return GestureDetector(
+      onTap: _showFilterModal,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: OakeyTheme.primaryDeep,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.tune, color: Colors.white, size: 16),
+            SizedBox(width: 6),
+            Text(
+              '필터',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 선택된 필터 태그
+  Widget _buildSelectedChip(String label) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE5DCD3),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: OakeyTheme.textMain),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () => setState(() => selectedFilters.remove(label)),
+            child: const Icon(Icons.close, size: 14, color: OakeyTheme.textSub),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 검색바 영역
   Widget _buildSearchBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -316,9 +338,13 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
   }
 }
 
-// [위젯]: 위스키 상세 카드
+// 개별 위스키 정보 표시 카드 (최적화 버전)
 class _WhiskyListCard extends StatelessWidget {
-  const _WhiskyListCard();
+  final Map<String, dynamic> data;
+  final VoidCallback onFavoriteTap;
+
+  const _WhiskyListCard({required this.data, required this.onFavoriteTap});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -332,9 +358,11 @@ class _WhiskyListCard extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // 이미지 영역 (정중앙 배치 추가)
           Container(
             width: 90,
             height: 90,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: const Color(0xFFF1EAE4),
               borderRadius: BorderRadius.circular(16),
@@ -346,49 +374,69 @@ class _WhiskyListCard extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 16),
+          // 정보 영역 (오버플로우 방지)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const Row(
+                Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'SPEYSIDE',
-                      style: TextStyle(
+                      data['region'],
+                      style: const TextStyle(
                         color: OakeyTheme.textHint,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Icon(
-                      Icons.favorite_border,
-                      color: OakeyTheme.textHint,
-                      size: 22,
+                    // 터치 영역 및 정렬 최적화
+                    IconButton(
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: onFavoriteTap,
+                      icon: Icon(
+                        data['isFavorite']
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        color: data['isFavorite']
+                            ? Colors.red
+                            : OakeyTheme.textHint,
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
-                const Text(
-                  '발베니 12년 더블우드',
-                  style: TextStyle(
+                // 이름 말줄임표 처리 필수
+                Text(
+                  data['name'],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: OakeyTheme.textMain,
                   ),
                 ),
-                const Text(
-                  'The Balvenie 12Y',
-                  style: TextStyle(fontSize: 12, color: OakeyTheme.textHint),
+                Text(
+                  data['engName'],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: OakeyTheme.textHint,
+                  ),
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    _buildSmallTag('Honey'),
-                    const SizedBox(width: 6),
-                    _buildSmallTag('Vanilla'),
-                    const SizedBox(width: 6),
-                    _buildSmallTag('Sweet'),
-                  ],
+                // 태그 줄바꿈 자동 처리
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: (data['tags'] as List)
+                      .map((tag) => _buildSmallTag(tag.toString()))
+                      .toList(),
                 ),
               ],
             ),
@@ -398,17 +446,18 @@ class _WhiskyListCard extends StatelessWidget {
     );
   }
 
+  // 소형 태그 위젯 (디자인 시안 최적화)
   Widget _buildSmallTag(String label) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F1E9),
+        color: OakeyTheme.accentOrange.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 12,
+          fontSize: 11,
           color: OakeyTheme.accentOrange,
           fontWeight: FontWeight.bold,
         ),
