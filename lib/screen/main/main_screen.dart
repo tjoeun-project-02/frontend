@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/controller/survey_controller.dart';
-import 'package:frontend/screen/survey_screen.dart';
+import 'package:frontend/screen/recommend/survey_screen.dart';
+import 'package:frontend/screen/list/whisky_list_screen.dart';
 import 'package:get/get.dart';
-import '../Directory/core/theme.dart';
-import '../controller/home_controller.dart';
-import '../widgets/oakey_bottom_bar.dart';
+import '../../Directory/core/theme.dart';
+import '../../controller/home_controller.dart';
+import '../../widgets/oakey_bottom_bar.dart';
 import 'guide_screen.dart';
 
 class MainScreen extends StatelessWidget {
@@ -18,7 +19,7 @@ class MainScreen extends StatelessWidget {
     // 보여줄 페이지 리스트
     final List<Widget> pages = [
       _buildHomeBody(),         // 인덱스 0: 홈 (기존 UI)
-      const Center(child: Text("위스키 리스트")), // 인덱스 1
+      const WhiskyListScreen(), // 인덱스 1
       const SurveyScreen(),      // 인덱스 2: 설문조사 (추천)
       const Center(child: Text("마이페이지")),   // 인덱스 3
     ];

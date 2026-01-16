@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/services/auth/auth_kakao.dart';
-import '../services/auth/auth_common.dart';
-import 'main_screen.dart';
+import '../../services/auth/auth_common.dart';
+import '../main/main_screen.dart';
 import 'signup_screen.dart';
 import 'pwfind_screen.dart';
 

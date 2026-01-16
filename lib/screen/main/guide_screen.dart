@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../widgets/oakey_bottom_bar.dart';
+import '../../widgets/oakey_bottom_bar.dart';
 
 class WhiskyGuideScreen extends StatefulWidget {
   @override

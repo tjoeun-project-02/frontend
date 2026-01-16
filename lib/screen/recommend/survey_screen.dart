@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controller/survey_controller.dart';
+import '../../controller/survey_controller.dart';
 
 class SurveyScreen extends StatelessWidget {
   const SurveyScreen({super.key});

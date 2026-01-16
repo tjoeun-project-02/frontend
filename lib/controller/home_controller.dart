@@ -1,7 +1,7 @@
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth/auth_common.dart';
-import '../screen/login_screen.dart';
+import '../screen/auth/login_screen.dart';
 
 class HomeController extends GetxController {
   // 관찰 가능한 상태 변수들

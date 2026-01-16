@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
-import '../controller/survey_controller.dart';
+import '../../controller/survey_controller.dart';
 
 class SurveyResultScreen extends StatelessWidget {
   final String whiskyName;
