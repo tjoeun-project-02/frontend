@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import '../Directory/core/theme.dart';
 
-/// 1. 버튼 스타일 종류 (딥브라운, 연베이지, 테두리)
+// Oakey button type
 enum OakeyButtonType { primary, secondary, outline }
 
-/// 2. 버튼 사이즈 종류 (전체화면용, 중간용, 작은등록용)
+// Oakey button size
 enum OakeyButtonSize { large, medium, small }
 
+// Oakey button
 class OakeyButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final OakeyButtonType type;
   final OakeyButtonSize size;
   final double? width;
+  final bool isLoading;
 
   const OakeyButton({
     super.key,
@@ -21,98 +23,144 @@ class OakeyButton extends StatelessWidget {
     this.type = OakeyButtonType.primary,
     this.size = OakeyButtonSize.large,
     this.width,
+    this.isLoading = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 사이즈별 높이와 폰트 설정
-    double height;
-    double fontSize;
-    double borderRadius = 16; // 전체적인 미니멀 곡률
-
-    switch (size) {
-      case OakeyButtonSize.large:
-        height = 58;
-        fontSize = 16;
-        break;
-      case OakeyButtonSize.medium:
-        height = 46;
-        fontSize = 14;
-        break;
-      case OakeyButtonSize.small:
-        height = 34;
-        fontSize = 12;
-        borderRadius = 10; // 작은 버튼은 곡률도 살짝 작게
-        break;
-    }
+    final _ButtonSizeSpec spec = _getSizeSpec(size);
+    final double radius = _getRadius(size);
+    final bool disabled = onPressed == null || isLoading;
 
     return SizedBox(
       width: width ?? (size == OakeyButtonSize.large ? double.infinity : null),
-      height: height,
-      child: _buildButton(fontSize, borderRadius),
+      height: spec.height,
+      child: _buildButton(
+        disabled: disabled,
+        fontSize: spec.fontSize,
+        radius: radius,
+      ),
     );
   }
 
-  Widget _buildButton(double fontSize, double borderRadius) {
-    final textStyle = TextStyle(fontSize: fontSize, fontWeight: FontWeight.w700);
+  Widget _buildButton({
+    required bool disabled,
+    required double fontSize,
+    required double radius,
+  }) {
+    final TextStyle textStyle = TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.2,
+    );
 
-    // Outline 스타일 (중복확인 등)
+    final Widget child = isLoading
+        ? SizedBox(
+            width: fontSize + 6,
+            height: fontSize + 6,
+            child: const CircularProgressIndicator(strokeWidth: 2),
+          )
+        : Text(text, style: textStyle);
+
     if (type == OakeyButtonType.outline) {
       return OutlinedButton(
-        onPressed: onPressed,
+        onPressed: disabled ? null : onPressed,
         style: OutlinedButton.styleFrom(
           foregroundColor: OakeyTheme.primaryDeep,
           side: const BorderSide(color: OakeyTheme.borderLine),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+          ),
         ),
-        child: Text(text, style: textStyle),
+        child: child,
       );
     }
 
-    // Primary & Secondary 스타일
+    if (type == OakeyButtonType.secondary) {
+      return ElevatedButton(
+        onPressed: disabled ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: OakeyTheme.surfaceMuted,
+          foregroundColor: OakeyTheme.primaryDeep,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(radius),
+          ),
+        ),
+        child: child,
+      );
+    }
+
     return ElevatedButton(
-      onPressed: onPressed,
+      onPressed: disabled ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        backgroundColor: type == OakeyButtonType.primary
-            ? OakeyTheme.primaryDeep
-            : OakeyTheme.surfaceMuted,
-        foregroundColor: type == OakeyButtonType.primary
-            ? OakeyTheme.textWhite
-            : OakeyTheme.primaryDeep,
+        backgroundColor: OakeyTheme.primaryDeep,
+        foregroundColor: OakeyTheme.textWhite,
         elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(radius),
+        ),
       ),
-      child: Text(text, style: textStyle),
+      child: child,
     );
+  }
+
+  _ButtonSizeSpec _getSizeSpec(OakeyButtonSize size) {
+    switch (size) {
+      case OakeyButtonSize.large:
+        return const _ButtonSizeSpec(height: 58, fontSize: 16);
+      case OakeyButtonSize.medium:
+        return const _ButtonSizeSpec(height: 46, fontSize: 14);
+      case OakeyButtonSize.small:
+        return const _ButtonSizeSpec(height: 34, fontSize: 12);
+    }
+  }
+
+  double _getRadius(OakeyButtonSize size) {
+    if (size == OakeyButtonSize.small) return OakeyTheme.radiusS;
+    if (size == OakeyButtonSize.medium) return OakeyTheme.radiusM;
+    return OakeyTheme.radiusL;
   }
 }
 
-/// 3. 태그(Tag/Chip) 위젯
-/// 상세페이지의 'Honey', 'Vanilla' 또는 지역명에 사용
+// Button size spec
+class _ButtonSizeSpec {
+  final double height;
+  final double fontSize;
+  const _ButtonSizeSpec({required this.height, required this.fontSize});
+}
+
+// Oakey tag
 class OakeyTag extends StatelessWidget {
   final String label;
-  final bool isSelected; // 선택된 상태인지 여부 (필터 등에서 사용)
+  final bool isSelected;
+  final EdgeInsets padding;
+  final double? radius;
 
   const OakeyTag({
     super.key,
     required this.label,
     this.isSelected = false,
+    this.padding = const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    this.radius,
   });
 
   @override
   Widget build(BuildContext context) {
+    final double r = radius ?? OakeyTheme.radiusS;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: padding,
       decoration: BoxDecoration(
         color: isSelected ? OakeyTheme.primaryDeep : OakeyTheme.surfaceMuted,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(r),
       ),
       child: Text(
         label,
         style: TextStyle(
           fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: isSelected ? OakeyTheme.textWhite : OakeyTheme.accentOrange, // 주황색 포인트 반영
+          color: isSelected ? OakeyTheme.textWhite : OakeyTheme.primaryDeep,
         ),
       ),
     );
