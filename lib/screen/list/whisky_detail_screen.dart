@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../Directory/core/theme.dart';
-import '../widgets/oakey_components.dart';
-import '../widgets/oakey_bottom_bar.dart';
+import '../../Directory/core/theme.dart';
+import '../../widgets/oakey_components.dart';
+import '../../widgets/oakey_bottom_bar.dart';
 
 class WhiskyDetailScreen extends StatefulWidget {
   final Map<String, dynamic> whiskyData;

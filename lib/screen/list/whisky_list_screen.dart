@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../Directory/core/theme.dart';
-import '../widgets/oakey_components.dart';
-import '../widgets/oakey_bottom_bar.dart';
+import '../../Directory/core/theme.dart';
+import '../../widgets/oakey_components.dart';
 
 class WhiskyListScreen extends StatefulWidget {
   const WhiskyListScreen({super.key});
@@ -72,10 +71,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
             ),
           ),
         ],
-      ),
-      bottomNavigationBar: OakeyBottomBar(
-        currentIndex: _currentIndex,
-        onTap: (index) => setState(() => _currentIndex = index),
       ),
     );
   }
