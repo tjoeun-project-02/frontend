@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/controller/user_controller.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
@@ -8,8 +9,8 @@ class EditProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final nicknameController = TextEditingController(text: UserController.to.nickname.value);
     // 사용자의 현재 데이터 (나중에 DB 연동)
-    const String currentName = "황용배";
     const String currentEmail = "duckbae@example.com";
     // 카카오 로그인 여부 (true일 경우 비밀번호 수정 비활성화)
     final bool isKakaoUser = false;
@@ -35,7 +36,9 @@ class EditProfileScreen extends StatelessWidget {
                     _buildInputCard(
                       title: "NICKNAME",
                       description: "나를 표현하는 멋진 이름을 정해보세요",
-                      children: [_buildCustomTextField(hint: currentName)],
+                      children: [_buildCustomTextField(
+                          controller: nicknameController,
+                          hint: "닉네임 입력")],
                     ),
                     const SizedBox(height: 20),
                     // 이메일 정보 카드 섹션 (수정 불가 - 비활성화)
@@ -143,11 +146,13 @@ class EditProfileScreen extends StatelessWidget {
 
   // 리스트 상세페이지와 통일된 디자인의 커스텀 텍스트 필드 빌더
   Widget _buildCustomTextField({
+    TextEditingController? controller,
     required String hint,
     bool isPassword = false,
     bool isEnabled = true,
   }) {
     return TextField(
+      controller: controller,
       enabled: isEnabled,
       obscureText: isPassword,
       style: TextStyle(

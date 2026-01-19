@@ -17,11 +17,6 @@ class MyPage extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-<<<<<<< Updated upstream
-          const SizedBox(height: 20),
-          Obx(() => Text("${UserController.to.nickname.value}님", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
-=======
->>>>>>> Stashed changes
           const SizedBox(height: 30),
           // 사용자 환영 문구 및 프로필 섹션
           _buildUserProfile(),
@@ -92,14 +87,14 @@ class MyPage extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                "황덕배 님",
+              Obx(()=> Text(
+                "${UserController.to.nickname.value} 님",
                 style: TextStyle(
                   fontSize: OakeyTheme.fontSizeXL,
                   fontWeight: FontWeight.bold,
                   color: OakeyTheme.primaryDeep,
                 ),
-              ),
+              )),
               const SizedBox(height: 4),
               Text(
                 "반가워요! 오늘도 즐거운 위스키 타임 되세요.",
