@@ -36,9 +36,12 @@ class EditProfileScreen extends StatelessWidget {
                     _buildInputCard(
                       title: "NICKNAME",
                       description: "나를 표현하는 멋진 이름을 정해보세요",
-                      children: [_buildCustomTextField(
+                      children: [
+                        _buildCustomTextField(
                           controller: nicknameController,
-                          hint: "닉네임 입력")],
+                          hint: "닉네임 입력",
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 20),
                     // 이메일 정보 카드 섹션 (수정 불가 - 비활성화)
@@ -95,7 +98,7 @@ class EditProfileScreen extends StatelessWidget {
       child: Text(
         "내 정보 수정",
         style: TextStyle(
-          fontSize: OakeyTheme.fontSizeXL,
+          fontSize: OakeyTheme.fontSizeL,
           fontWeight: FontWeight.w800,
           color: OakeyTheme.textMain,
         ),
