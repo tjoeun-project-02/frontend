@@ -97,7 +97,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: OakeyTheme.fontSizeXL,
+              fontSize: OakeyTheme.fontSizeL,
               fontWeight: FontWeight.w800,
               color: OakeyTheme.textMain,
             ),
