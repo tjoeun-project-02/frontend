@@ -11,11 +11,6 @@ class SurveyScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF9F5F2),
-      // AppBar를 제거하거나 투명하게 고정하여 본문 영역 확보
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(0), // 인트로에서 앱바 공간 아예 제거
-        child: AppBar(elevation: 0, backgroundColor: Colors.transparent),
-      ),
       body: Column(
         children: [
           // 진행바: 인트로(0)와 로딩(3)이 아닐 때만 표시
@@ -31,7 +26,7 @@ class SurveyScreen extends StatelessWidget {
           Expanded(
             child: Obx(() {
               switch (surveyCtrl.surveyStep.value) {
-                case 0: return _buildIntroStep(surveyCtrl);
+                case 0: return _buildIntroStep(context, surveyCtrl);
                 case 1: return _buildStep1(surveyCtrl);
                 case 2: return _buildStep2(surveyCtrl);
                 default: return _buildResultLoading();
@@ -44,13 +39,13 @@ class SurveyScreen extends StatelessWidget {
   }
 
   // [고정 레이아웃] STEP 0: 인트로 화면
-  Widget _buildIntroStep(SurveyController surveyCtrl) {
+  Widget _buildIntroStep(BuildContext context,SurveyController surveyCtrl) {
     return Column(
       children: [
         // 상단 갈색 박스 (화면의 약 42%)
         Container(
           width: double.infinity,
-          height: MediaQuery.of(Get.context!).size.height * 0.42,
+          height: MediaQuery.of(context).size.height * 0.42,
           decoration: const BoxDecoration(
             color: Color(0xFF4E342E),
             borderRadius: BorderRadius.only(bottomRight: Radius.circular(80)),
