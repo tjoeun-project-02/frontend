@@ -4,7 +4,6 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AuthService {
-
   static final String baseUrl = dotenv.env['API_BASE_URL']!;
 
   // 이메일 회원가입
@@ -40,6 +39,7 @@ class AuthService {
       rethrow; // UI(SignupScreen)에서 에러 팝업을 띄울 수 있도록 던짐
     }
   }
+
   // 이메일 로그인
   static Future<bool> handleEmailLogin({
     required String email,
@@ -62,7 +62,9 @@ class AuthService {
         }
       } else {
         final errorBody = jsonDecode(response.body);
-        throw Exception(errorBody['message'] ?? '로그인 실패: ${response.statusCode}');
+        throw Exception(
+          errorBody['message'] ?? '로그인 실패: ${response.statusCode}',
+        );
       }
       return false;
     } catch (e) {
@@ -72,10 +74,10 @@ class AuthService {
   }
 
   static Future<dynamic> requestWithRefresh(
-      String method,
-      String path, {
-        Map<String, dynamic>? body,
-      }) async {
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     String? accessToken = prefs.getString('accessToken');
 
@@ -91,7 +93,11 @@ class AuthService {
     if (method == 'POST') {
       response = await http.post(url, headers: headers, body: jsonEncode(body));
     } else if (method == 'PATCH') {
-      response = await http.patch(url, headers: headers, body: jsonEncode(body));
+      response = await http.patch(
+        url,
+        headers: headers,
+        body: jsonEncode(body),
+      );
     } else {
       response = await http.get(url, headers: headers);
     }
@@ -124,9 +130,17 @@ class AuthService {
         // 4. 새 토큰으로 기존 요청 재시도
         headers['Authorization'] = 'Bearer ${newData['accessToken']}';
         if (method == 'POST') {
-          response = await http.post(url, headers: headers, body: jsonEncode(body));
+          response = await http.post(
+            url,
+            headers: headers,
+            body: jsonEncode(body),
+          );
         } else if (method == 'PATCH') {
-          response = await http.patch(url, headers: headers, body: jsonEncode(body));
+          response = await http.patch(
+            url,
+            headers: headers,
+            body: jsonEncode(body),
+          );
         } else {
           response = await http.get(url, headers: headers);
         }
