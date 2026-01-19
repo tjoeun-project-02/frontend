@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
+import 'controller/user_controller.dart';
 import 'screen/main/splash_screen.dart';  // 스플래시 화면
 import 'screen/main/main_screen.dart';
 import 'Directory/core/theme.dart';
@@ -12,7 +13,7 @@ void main() async {
 
   // 환경 변수 (.env) 로드
   await dotenv.load(fileName: 'assets/config/.env');
-
+  Get.put(UserController(), permanent: true);
   // 카카오 SDK 초기화 (보안을 위해 .env 값 사용)
   KakaoSdk.init(
     nativeAppKey: dotenv.env['KAKAO_NATIVE_KEY']!,

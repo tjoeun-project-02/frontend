@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/controller/user_controller.dart';
 import 'package:get/get.dart';
 
 import '../../controller/survey_controller.dart';
@@ -16,9 +17,9 @@ class SurveyResultScreen extends StatelessWidget {
     required this.rating,
     required this.description,
   });
-
   @override
   Widget build(BuildContext context) {
+
     return PopScope(
       // 물리 뒤로가기나 제스처가 발생할 때 실행될 콜백
         onPopInvokedWithResult: (didPop, result) {
@@ -49,10 +50,10 @@ class SurveyResultScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 10),
-              const Text(
-                "황용배님을 위한 위스키를 찾았습니다!",
+              Obx(() => Text(
+                "${UserController.to.nickname.value}님을 위한 위스키를 찾았습니다!",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
+              )),
               const SizedBox(height: 25),
 
               // 메인 결과 카드

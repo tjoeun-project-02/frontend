@@ -141,11 +141,9 @@ class AuthService {
     return jsonDecode(response.body);
   }
 
-  // 로그인 상태 확인 (스플래시 화면용)
-  static Future<bool> isLoggedIn() async {
+  static Future<String?> getStoredToken() async {
     final prefs = await SharedPreferences.getInstance();
-    final accessToken = prefs.getString('accessToken');
-    return accessToken != null && accessToken.isNotEmpty;
+    return prefs.getString('accessToken');
   }
 
   // 로그아웃
@@ -157,11 +155,27 @@ class AuthService {
   // 데이터 저장 로직 분리 (Clean Architecture - Data Source)
   static Future<void> saveAuthData(Map<String, dynamic> data) async {
     final prefs = await SharedPreferences.getInstance();
+
+    // 1. 기본 정보 먼저 확실히 저장
     await prefs.setString('accessToken', data['accessToken']);
     await prefs.setString('refreshToken', data['refreshToken']);
     await prefs.setInt('userId', data['userId']);
-    final profile = await fetchUserProfile();
-    await prefs.setString('nickname', profile['nickname']);
+
+    try {
+      // 2. 닉네임이 응답 데이터에 이미 포함되어 있다면 바로 저장 (추천)
+      if (data['nickname'] != null) {
+        await prefs.setString('nickname', data['nickname']);
+      } else {
+        // 3. 없다면 서버에 다시 요청 (헤더가 누락되지 않도록 명시적 호출)
+        final profile = await fetchUserProfile();
+        if (profile != null && profile['nickname'] != null) {
+          await prefs.setString('nickname', profile['nickname']);
+        }
+      }
+    } catch (e) {
+      print("닉네임 로드 실패: $e");
+      await prefs.setString('nickname', '고객'); // 실패 시 기본값
+    }
   }
 
   static Future<Map<String, dynamic>> fetchUserProfile() async {

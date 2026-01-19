@@ -1,12 +1,14 @@
-// lib/screens/splash_screen.dart
 import 'package:flutter/material.dart';
-import '../../services/auth/auth_common.dart';
+import 'package:get/get.dart';
+import '../../controller/user_controller.dart';
 import '../auth/login_screen.dart';
-import 'main_screen.dart';
+import '../main/main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
@@ -18,41 +20,39 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _initAndNavigate() async {
 
-    // 2. 최소 로딩 시간 보장 (스플래시 애니메이션 감상용)
-    await Future.delayed(Duration(seconds: 2));
+    // 최소 로딩 시간 보장 (2초)
+    await Future.delayed(const Duration(seconds: 2));
 
-    // 3. 로그인 여부 판단
-    bool isLogged = await AuthService.isLoggedIn();
-
-    // 4. 화면 이동
-    if (!mounted) return;
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => isLogged ? MainScreen() : LoginScreen(),
-      ),
-    );
+    if (UserController.to.isLoggedIn.value) {
+      Get.offAll(() => MainScreen());
+    } else {
+      Get.offAll(() => LoginScreen());
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF9F5F2), // 앱 테마색에 맞춤
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 로고 이미지 (경로를 상수로 관리하면 더 좋습니다)
             Image.asset(
-                'assets/img/whiskey_logo.png',
-                width: 200,
-                height: 200
+              'assets/img/whiskey_logo.png',
+              width: 200,
+              height: 200,
             ),
             const SizedBox(height: 20),
-            const CircularProgressIndicator(),
+            const CircularProgressIndicator(color: Color(0xFF4E342E)),
             const SizedBox(height: 20),
             const Text(
-                'Oakey',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)
+              'Oakey',
+              style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF4E342E)
+              ),
             ),
           ],
         ),

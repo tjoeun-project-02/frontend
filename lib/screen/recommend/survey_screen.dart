@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/controller/user_controller.dart';
 import 'package:get/get.dart';
 import '../../controller/survey_controller.dart';
 
@@ -71,8 +72,8 @@ class SurveyScreen extends StatelessWidget {
               children: [
                 Container(width: 40, height: 4, color: const Color(0xFFD4AF37)),
                 const SizedBox(height: 25),
-                const Text("황용배님,\n어떤 위스키를 좋아하세요?",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.4)),
+                Obx(() => Text("${UserController.to.nickname.value}님,\n어떤 위스키를 좋아하세요?",
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, height: 1.4))),
                 const SizedBox(height: 15),
                 const Text("간단한 질문을 통해\n가장 완벽하게 어울리는 위스키를 추천합니다.",
                     style: TextStyle(color: Colors.grey, fontSize: 13, height: 1.5)),
@@ -109,7 +110,7 @@ class SurveyScreen extends StatelessWidget {
         children: [
           const Text("STEP 01", style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
           const SizedBox(height: 10),
-          const Text("황용배님이 선호하는\n위스키의 '맛'을 골라주세요.", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+          Obx(() => Text("${UserController.to.nickname.value}님이 선호하는\n위스키의 '맛'을 골라주세요.", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
           const SizedBox(height: 25),
 
           // 태그 영역
@@ -186,7 +187,9 @@ class SurveyScreen extends StatelessWidget {
         children: [
           const CircularProgressIndicator(color: Color(0xFF4E342E), strokeWidth: 2),
           const SizedBox(height: 40),
-          const Text("황용배님의 취향에 맞는\n위스키를 찾고 있어요", textAlign: TextAlign.center, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.4)),
+          Obx(() => Text("${UserController.to.nickname.value}님의 취향에 맞는\n위스키를 찾고 있어요",
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, height: 1.4))),
           const SizedBox(height: 10),
           const Text("잠시만 기다려 주세요...", style: TextStyle(color: Colors.grey)),
         ],

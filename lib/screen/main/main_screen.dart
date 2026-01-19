@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:frontend/controller/survey_controller.dart';
+import 'package:frontend/controller/user_controller.dart';
 import 'package:frontend/screen/mypage/mypage_screen.dart';
 import 'package:frontend/screen/recommend/survey_screen.dart';
 import 'package:frontend/screen/list/whisky_list_screen.dart';
@@ -39,10 +40,16 @@ class MainScreen extends StatelessWidget {
         index: controller.currentIndex.value,
         children: pages,
       )),
-      bottomNavigationBar: Obx(() => OakeyBottomBar(
-        currentIndex: controller.currentIndex.value,
-        onTap: controller.changeTabIndex,
-      )),
+      bottomNavigationBar: Obx(() {
+        if (navController.surveyStep.value != 0) {
+          return const SizedBox.shrink();
+        }
+
+        return OakeyBottomBar(
+          currentIndex: controller.currentIndex.value,
+          onTap: controller.changeTabIndex,
+        );
+      }),
     );
   }
 
@@ -52,7 +59,7 @@ class MainScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Obx(() => Text('안녕하세요 ${controller.userName.value}님\n어떤 위스키를 찾아볼까요?',
+          Obx(() => Text('안녕하세요 ${UserController.to.nickname.value}님\n어떤 위스키를 찾아볼까요?',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
           const SizedBox(height: 20),
           _buildSearchBar(),

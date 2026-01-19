@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/controller/user_controller.dart';
 import 'package:frontend/screen/mypage/edit_profile_screen.dart';
 import 'package:frontend/screen/mypage/liked_whisky_screen.dart';
 import 'package:frontend/screen/mypage/tasting_note_screen.dart';
@@ -15,7 +16,7 @@ class MyPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-          const Text("황용배 님", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+          Obx(() => Text("${UserController.to.nickname.value}님", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold))),
           const SizedBox(height: 30),
 
           // 메뉴 리스트

@@ -1,9 +1,15 @@
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../screen/recommend/survey_result_screen.dart';
 class SurveyController extends GetxController {
   var surveyStep = 0.obs; // 0: 인트로, 1: 맛, 2: 가격, 3: 로딩
   var selectedTastes = <String>[].obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+  }
 
   void nextStep() {
     if (surveyStep.value == 2) {
