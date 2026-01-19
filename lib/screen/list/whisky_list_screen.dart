@@ -47,12 +47,6 @@ class _WhiskyListScreenState extends State<WhiskyListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: const Text('Oakey'),
-        centerTitle: false,
-      ),
       body: Column(
         children: [
           _buildSearchBar(),
