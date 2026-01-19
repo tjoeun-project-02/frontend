@@ -38,7 +38,7 @@ class AuthKakao{
 
       if (response != null && response['accessToken'] != null) {
         // [CASE 1] 기존 회원: 즉시 로그인 처리 및 정보 저장
-        await AuthService.saveAuthData(response);
+        await AuthService.saveAuthData(response, 'kakao');
         return true;
       }
       return false;

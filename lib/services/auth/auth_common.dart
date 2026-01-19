@@ -3,6 +3,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../controller/user_controller.dart';
+import 'package:get/get.dart';
+
 class AuthService {
   static final String baseUrl = dotenv.env['API_BASE_URL']!;
 
@@ -57,7 +60,7 @@ class AuthService {
 
         // 성공 시 토큰 저장 (내부 메서드 활용)
         if (data['accessToken'] != null) {
-          await saveAuthData(data);
+          await saveAuthData(data, 'email');
           return true;
         }
       } else {
@@ -167,28 +170,55 @@ class AuthService {
   }
 
   // 데이터 저장 로직 분리 (Clean Architecture - Data Source)
-  static Future<void> saveAuthData(Map<String, dynamic> data) async {
+  static Future<void> saveAuthData(Map<String, dynamic> data, String loginType) async {
     final prefs = await SharedPreferences.getInstance();
 
     // 1. 기본 정보 먼저 확실히 저장
     await prefs.setString('accessToken', data['accessToken']);
     await prefs.setString('refreshToken', data['refreshToken']);
     await prefs.setInt('userId', data['userId']);
+    await prefs.setString('loginType', loginType);
+    if (loginType == 'email'){
+      await prefs.setString('email', data['email'] ?? '');
+    }else{
+      await prefs.remove('email');
+    }
 
     try {
-      // 2. 닉네임이 응답 데이터에 이미 포함되어 있다면 바로 저장 (추천)
-      if (data['nickname'] != null) {
+      // 2. 닉네임과 이메일 정보 처리
+      if (data['nickname'] != null && data['email'] != null) {
+        // 로그인 응답에 정보가 다 있다면 바로 저장
         await prefs.setString('nickname', data['nickname']);
+        if (loginType == 'email') await prefs.setString('email', data['email']);
       } else {
-        // 3. 없다면 서버에 다시 요청 (헤더가 누락되지 않도록 명시적 호출)
+        // 3. 정보가 부족하다면 서버에 상세 프로필 요청 (fetchUserProfile)
         final profile = await fetchUserProfile();
-        if (profile != null && profile['nickname'] != null) {
-          await prefs.setString('nickname', profile['nickname']);
+
+        if (profile != null) {
+          // 닉네임 저장
+          if (profile['nickname'] != null) {
+            await prefs.setString('nickname', profile['nickname']);
+          }
+
+          // 🔥 [수정 포인트] 이메일 저장 로직 추가
+          if (loginType == 'email' && profile['email'] != null) {
+            await prefs.setString('email', profile['email']);
+            print("✅ SharedPreferences에 이메일 저장 완료: ${profile['email']}");
+          }
         }
       }
     } catch (e) {
-      print("닉네임 로드 실패: $e");
-      await prefs.setString('nickname', '고객'); // 실패 시 기본값
+      print("유저 정보 세부 로드 실패: $e");
+      if (prefs.getString('nickname') == null) await prefs.setString('nickname', '고객');
+    }
+
+    // 카카오 유저일 경우 이메일 삭제 (의도하신 대로)
+    if (loginType != 'email') {
+      await prefs.remove('email');
+    }
+
+    if (Get.isRegistered<UserController>()) {
+      await UserController.to.loadUserData();
     }
   }
 

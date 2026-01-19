@@ -10,10 +10,10 @@ class EditProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nicknameController = TextEditingController(text: UserController.to.nickname.value);
-    // 사용자의 현재 데이터 (나중에 DB 연동)
-    const String currentEmail = "duckbae@example.com";
+    // 사용자의 현재 데이터
+    final String currentEmail = UserController.to.email.value;
     // 카카오 로그인 여부 (true일 경우 비밀번호 수정 비활성화)
-    final bool isKakaoUser = false;
+    final bool isKakaoUser = UserController.to.loginType.value == "kakao";
 
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
@@ -54,32 +54,28 @@ class EditProfileScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     // 비밀번호 수정 카드 섹션 (로그인 방식에 따라 비활성화 결정)
-                    _buildInputCard(
-                      title: "PASSWORD",
-                      description: isKakaoUser
-                          ? "카카오 계정은 비밀번호를 수정할 수 없습니다"
-                          : "안전한 서비스 이용을 위해 정기적으로 변경해 주세요",
-                      children: [
-                        _buildCustomTextField(
-                          hint: "현재 비밀번호",
-                          isPassword: true,
-                          isEnabled: !isKakaoUser,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCustomTextField(
-                          hint: "새 비밀번호",
-                          isPassword: true,
-                          isEnabled: !isKakaoUser,
-                        ),
-                        const SizedBox(height: 12),
-                        _buildCustomTextField(
-                          hint: "비밀번호 확인",
-                          isPassword: true,
-                          isEnabled: !isKakaoUser,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
+                    if (!isKakaoUser)
+                      _buildInputCard(
+                        title: "PASSWORD",
+                        description: "안전한 서비스 이용을 위해 정기적으로 변경해 주세요",
+                        children: [
+                          _buildCustomTextField(
+                            hint: "현재 비밀번호",
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildCustomTextField(
+                            hint: "새 비밀번호",
+                            isPassword: true,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildCustomTextField(
+                            hint: "비밀번호 확인",
+                            isPassword: true,
+                          ),
+                        ],
+                      ),
+                    if (!isKakaoUser) const SizedBox(height: 40) else const SizedBox(height: 20),
                     // 변경사항 저장 버튼
                     _buildSaveButton(),
                   ],
