@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 import '../Directory/core/theme.dart';
 
 class WhiskyListCard extends StatelessWidget {
-  final Map<String, dynamic>
-  whisky; // 위스키 데이터 (id, name, engName, region, tags 등)
-  final VoidCallback? onTap; // 카드 클릭 시 상세 이동
-  final VoidCallback? onFavoriteTap; // 찜 버튼 클릭
-  final bool? isFavorite; // 찜 상태 강제 지정용
-  final EdgeInsetsGeometry? margin; // 하단 여백 조절
+  // 위스키 데이터
+  final Map<String, dynamic> whisky;
+
+  // 카드 전체 클릭 이벤트
+  final VoidCallback? onTap;
+
+  // 찜 버튼 클릭 이벤트
+  final VoidCallback? onFavoriteTap;
+
+  // 찜 상태 값
+  final bool? isFavorite;
+
+  // 카드 외부 여백
+  final EdgeInsetsGeometry? margin;
+
+  // 선택된 필터 목록
+  final Set<String> highlightFilters;
 
   const WhiskyListCard({
     super.key,
@@ -16,107 +27,118 @@ class WhiskyListCard extends StatelessWidget {
     this.onFavoriteTap,
     this.isFavorite,
     this.margin,
+    this.highlightFilters = const {},
   });
 
   @override
   Widget build(BuildContext context) {
-    // 데이터 안전하게 추출
-    final String region = (whisky['region'] ?? '').toString();
-    final String name = (whisky['name'] ?? '').toString();
-    final String engName = (whisky['engName'] ?? '').toString();
-    final List<String> tags = ((whisky['tags'] as List?) ?? [])
-        .map((e) => e.toString())
-        .toList();
-    final bool fav = isFavorite ?? (whisky['isFavorite'] == true);
+    // 위스키 기본 정보 추출
+    final String wsDistillery = (whisky['ws_distillery'] ?? '').toString();
+    final String wsName = (whisky['ws_name'] ?? '이름 없음').toString();
+    final double wsRating =
+        double.tryParse(whisky['ws_rating']?.toString() ?? '0.0') ?? 0.0;
+    final bool fav = isFavorite ?? (whisky['is_liked'] == true);
+    final List<String> flavorTags = List<String>.from(
+      whisky['flavor_tags'] ?? [],
+    );
+
+    // 현재 테마 텍스트 스타일 참조
+    final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        // 카드 전체 스타일
         margin: margin ?? const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: OakeyTheme.surfacePure,
-          borderRadius: BorderRadius.circular(
-            25,
-          ), // LikedWhiskyScreen에서 썼던 둥근 모서리
+          borderRadius: OakeyTheme.brCard,
           boxShadow: OakeyTheme.cardShadow,
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // 1. 이미지 영역 (베이지 배경 박스)
-            Container(
-              width: 80,
-              height: 80,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: OakeyTheme.surfaceMuted,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Icon(
-                Icons.liquor,
-                color: OakeyTheme.primarySoft,
-                size: 40,
-              ),
-            ),
-
-            const SizedBox(width: 15),
-
-            // 2. 정보 영역 (텍스트 + 태그)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
+            // 카드 메인 콘텐츠 영역
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    region.isEmpty ? '-' : region,
-                    style: const TextStyle(
-                      color: OakeyTheme.textHint,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
+                  // 위스키 이미지 영역
+                  Container(
+                    width: 90,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: OakeyTheme.surfaceMuted,
+                      borderRadius: BorderRadius.circular(OakeyTheme.radiusS),
+                    ),
+                    child: const Icon(
+                      Icons.liquor,
+                      color: OakeyTheme.primarySoft,
+                      size: 40,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    name.isEmpty ? '이름 없음' : name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                      color: OakeyTheme.textMain,
+                  const SizedBox(width: 16),
+
+                  // 위스키 정보 텍스트 영역
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // 증류소 이름 표시
+                        Text(
+                          wsDistillery.isEmpty ? '-' : wsDistillery,
+                          style: textTheme.labelSmall?.copyWith(
+                            color: OakeyTheme.textHint,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        // 위스키 이름 표시
+                        Text(
+                          wsName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: OakeyTheme.textMain,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+
+                        // 별점 표시 영역
+                        _buildRatingRow(wsRating, textTheme),
+                        const SizedBox(height: 8),
+
+                        // 맛 태그 목록 영역
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 4,
+                          children: flavorTags.map((tag) {
+                            final bool isHighlighted = highlightFilters
+                                .contains(tag);
+                            return _buildTag(tag, isHighlighted, textTheme);
+                          }).toList(),
+                        ),
+                      ],
                     ),
-                  ),
-                  Text(
-                    engName,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: OakeyTheme.textHint,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  // 원래 스타일의 주황색 태그 영역
-                  Wrap(
-                    spacing: 6,
-                    runSpacing: 4,
-                    children: tags.map((t) => _buildTag(t)).toList(),
                   ),
                 ],
               ),
             ),
 
-            // 3. 찜 버튼 (하트 아이콘)
-            IconButton(
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              visualDensity: VisualDensity.compact,
-              onPressed: onFavoriteTap,
-              icon: Icon(
-                fav ? Icons.favorite : Icons.favorite_border,
-                color: fav ? Colors.red : OakeyTheme.textHint, // 빨간색으로 포인트
-                size: 30,
+            // 찜하기 버튼 오른쪽 상단 고정
+            Positioned(
+              top: -2,
+              right: 0,
+              child: IconButton(
+                onPressed: onFavoriteTap,
+                icon: Icon(
+                  fav ? Icons.favorite : Icons.favorite_border,
+                  color: fav ? Colors.red : OakeyTheme.textHint,
+                  size: 26,
+                ),
               ),
             ),
           ],
@@ -125,20 +147,43 @@ class WhiskyListCard extends StatelessWidget {
     );
   }
 
-  // ✨ 황덕배님이 원하셨던 원래 주황색 태그 스타일
-  Widget _buildTag(String label) {
+  // 별점 표시 위젯
+  Widget _buildRatingRow(double rating, TextTheme textTheme) {
+    return Row(
+      children: [
+        const Icon(
+          Icons.star,
+          color: OakeyTheme.accentGold,
+          size: OakeyTheme.fontSizeM,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          rating.toString(),
+          style: textTheme.labelLarge?.copyWith(
+            color: OakeyTheme.textMain,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 맛 태그 표시 위젯
+  Widget _buildTag(String label, bool isHighlighted, TextTheme textTheme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: const Color(0xFFFDEFE1), // 원래 쓰던 연한 주황색 배경
-        borderRadius: BorderRadius.circular(5),
+        color: isHighlighted
+            ? OakeyTheme.accentOrange
+            : OakeyTheme.accentOrange.withOpacity(0.1),
+        borderRadius: OakeyTheme.brTag,
       ),
       child: Text(
         label,
-        style: const TextStyle(
-          fontSize: 10,
-          color: Colors.orange, // 원래 쓰던 주황색 텍스트
-          fontWeight: FontWeight.bold,
+        style: textTheme.labelSmall?.copyWith(
+          fontSize: OakeyTheme.fontSizeXS,
+          color: isHighlighted ? Colors.white : OakeyTheme.accentOrange,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
