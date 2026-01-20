@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:get/get.dart'; // GetX 임포트 확인
+import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
 
@@ -14,11 +14,9 @@ class WhiskyDetailScreen extends StatefulWidget {
 }
 
 class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
-  // 테이스팅 노트 입력을 위한 컨트롤러 및 포커스 노드
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _noteFocusNode = FocusNode();
 
-  // 저장 상태 및 수정 모드 활성화 여부 변수
   bool _isNoteSaved = false;
   bool _isEditing = false;
 
@@ -29,10 +27,9 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     super.dispose();
   }
 
-  // 등록 및 수정 상태에 따른 버튼 동작 핸들러
   void _handleNoteAction() {
     if (!_isNoteSaved) {
-      _saveProcess('등록되었습니다.');
+      _saveProcess('테이스팅 노트가 등록되었습니다.');
     } else {
       if (!_isEditing) {
         setState(() => _isEditing = true);
@@ -44,13 +41,11 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     }
   }
 
-  // 텍스트 저장 처리 및 마이페이지와 동일한 스낵바 알림 로직
   void _saveProcess(String message) {
     if (_noteController.text.trim().isEmpty) return;
     FocusScope.of(context).unfocus();
     setState(() => _isNoteSaved = true);
 
-    // 마이페이지 삭제 알림과 디자인 통일
     Get.snackbar(
       _isEditing ? "수정 완료" : "등록 완료",
       message,
@@ -62,7 +57,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 작성된 테이스팅 노트 초기화 및 삭제 알림 로직
   void _handleDelete() {
     FocusScope.of(context).unfocus();
     setState(() {
@@ -71,7 +65,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
       _isEditing = false;
     });
 
-    // 마이페이지 삭제 알림과 디자인 통일
     Get.snackbar(
       "삭제 완료",
       "테이스팅 노트가 삭제되었습니다.",
@@ -83,7 +76,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 입문자를 위한 맛 지표 도움말 팝업 노출
   void _showTasteHelp(BuildContext context) {
     showDialog(
       context: context,
@@ -123,7 +115,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 도움말 상세 항목 레이아웃 빌더
   Widget _buildHelpItem(String title, String desc) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -133,14 +124,17 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           Text(
             title,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: OakeyTheme.accentOrange,
-              fontSize: 13,
+              fontSize: OakeyTheme.fontSizeM,
             ),
           ),
           Text(
             desc,
-            style: const TextStyle(color: OakeyTheme.textSub, fontSize: 12),
+            style: const TextStyle(
+              color: OakeyTheme.textSub,
+              fontSize: OakeyTheme.fontSizeS,
+            ),
           ),
         ],
       ),
@@ -150,6 +144,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final String name = (widget.whiskyData['ws_name'] ?? 'Unknown').toString();
+    final String enName = (widget.whiskyData['ws_name_en'] ?? '').toString();
     final String category = (widget.whiskyData['ws_category'] ?? '-')
         .toString();
     final String distillery = (widget.whiskyData['ws_distillery'] ?? '-')
@@ -164,8 +159,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
         double.tryParse(widget.whiskyData['ws_rating']?.toString() ?? '0.0') ??
         0.0;
     final int voteCnt =
-        int.tryParse(widget.whiskyData['ws_vote_cnt']?.toString() ?? '1245') ??
-        1245;
+        int.tryParse(widget.whiskyData['ws_vote_cnt']?.toString() ?? '0') ?? 0;
     final List<String> flavors = List<String>.from(
       widget.whiskyData['flavor_tags'] ?? [],
     );
@@ -178,37 +172,58 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
             const OakeyDetailAppBar(),
             Expanded(
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    _buildMainWhiskyCard(name),
-                    const SizedBox(height: 24),
+                    // 1. 메인 정보 (카드 제거, 배경에 직접 배치)
+                    _buildMainWhiskyInfo(name, enName),
+
+                    const SizedBox(height: 32),
+
+                    // 구분선 하나 싹 그어주고
+                    const Divider(
+                      color: Color(0xFFE0E0E0),
+                      thickness: 1,
+                      indent: 20,
+                      endIndent: 20,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // 2. 품질 지표 (★이것만 카드로 유지★)
                     _buildSectionTitle(context, 'Quality Metrics'),
                     _buildQualityCard(
                       context,
                       score: rating.toStringAsFixed(2),
                       votes: voteCnt,
                     ),
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 40),
+
+                    // 3. 상세 정보 (카드 제거, 투명 그리드)
                     _buildSectionTitle(context, 'Information'),
                     _buildInfoGrid(
                       context,
                       items: [
                         _InfoItem(label: 'AGE (숙성 연수)', value: ageText),
                         _InfoItem(label: 'DISTILLERY (증류소)', value: distillery),
-                        _InfoItem(label: 'CATEGORY (카테고리)', value: category),
+                        _InfoItem(label: 'CATEGORY (종류)', value: category),
                         _InfoItem(label: 'ABV (도수)', value: abvText),
                       ],
                     ),
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 40),
+
+                    // 4. 플레이버 태그 (카드 제거)
                     _buildSectionTitle(context, 'Flavor Tags'),
-                    _buildSectionDesc(
-                      context,
-                      '위스키와 관련하여 가장 많이 언급되는 기준으로 선정되었습니다',
-                    ),
+                    _buildSectionDesc(context, '위스키와 관련하여 가장 많이 언급되는 기준입니다'),
                     _buildFlavorTags(flavors),
-                    const SizedBox(height: 24),
+
+                    const SizedBox(height: 40),
+
+                    // 5. 맛 그래프 (카드 제거, 차트만 덜렁)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -220,17 +235,21 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                             child: const Icon(
                               Icons.help_outline_rounded,
                               color: OakeyTheme.textHint,
-                              size: 20,
+                              size: 24,
                             ),
                           ),
                         ),
                       ],
                     ),
-                    _buildTasteProfileCard(context),
-                    const SizedBox(height: 24),
+                    _buildTasteProfileChart(context),
+
+                    const SizedBox(height: 40),
+
+                    // 6. 테이스팅 노트 입력 (카드 제거, 입력창만 남김)
                     _buildTastingNoteHeader(context),
                     _buildTastingNoteInputBox(context),
-                    const SizedBox(height: 32),
+
+                    const SizedBox(height: 50),
                   ],
                 ),
               ),
@@ -241,23 +260,15 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  Widget _buildMainWhiskyCard(String name) {
+  // 메인 정보: 카드 껍데기 벗기고 텍스트만 깔끔하게 중앙 정렬
+  Widget _buildMainWhiskyInfo(String name, String enName) {
     final String? imageUrl = widget.whiskyData['ws_image_url'];
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 32),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
-        boxShadow: OakeyTheme.cardShadow,
-        border: Border.all(color: OakeyTheme.borderLine),
-      ),
+    return Center(
       child: Column(
         children: [
           Container(
-            width: 160,
-            height: 160,
+            width: 180,
+            height: 180,
             decoration: BoxDecoration(
               color: OakeyTheme.surfaceMuted,
               borderRadius: BorderRadius.circular(OakeyTheme.radiusL),
@@ -270,22 +281,43 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.liquor_rounded,
-                        size: 80,
+                        size: 90,
                         color: OakeyTheme.primarySoft,
                       ),
                     ),
                   )
                 : const Icon(
                     Icons.liquor_rounded,
-                    size: 80,
+                    size: 90,
                     color: OakeyTheme.primarySoft,
                   ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            name,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleLarge,
+          const SizedBox(height: 24),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              name,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: OakeyTheme.fontSizeL,
+                fontWeight: FontWeight.w800,
+                color: OakeyTheme.textMain,
+                height: 1.3,
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Text(
+              enName,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: OakeyTheme.fontSizeS,
+                color: OakeyTheme.textHint,
+                height: 1.4,
+              ),
+            ),
           ),
         ],
       ),
@@ -295,17 +327,28 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, bottom: 8),
-      child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: OakeyTheme.fontSizeM,
+          fontWeight: FontWeight.w800,
+          color: OakeyTheme.textMain,
+        ),
+      ),
     );
   }
 
   Widget _buildSectionDesc(BuildContext context, String text) {
     return Padding(
-      padding: const EdgeInsets.only(left: 20, bottom: 12),
-      child: Text(text, style: Theme.of(context).textTheme.labelMedium),
+      padding: const EdgeInsets.only(left: 20, bottom: 16),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13, color: OakeyTheme.textHint),
+      ),
     );
   }
 
+  // ★ 유일하게 살아남은 카드 (품질 지표) ★
   Widget _buildQualityCard(
     BuildContext context, {
     required String score,
@@ -313,29 +356,40 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   }) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
         color: OakeyTheme.surfacePure,
         borderRadius: OakeyTheme.brCard,
-        border: Border.all(color: OakeyTheme.borderLine),
-        boxShadow: OakeyTheme.cardShadow,
+        border: Border.all(color: OakeyTheme.borderLine.withOpacity(0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'Whiskybase Score',
-                style: Theme.of(context).textTheme.labelMedium,
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontSize: 12),
               ),
               const SizedBox(height: 8),
               Text(
                 score,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: 36,
-                  color: OakeyTheme.accentOrange,
+                style: const TextStyle(
+                  fontSize: 42,
+                  fontWeight: FontWeight.w900,
+                  color: OakeyTheme.accentGold, // 골드/오렌지 포인트
+                  height: 1.0,
                 ),
               ),
             ],
@@ -343,9 +397,20 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Votes', style: Theme.of(context).textTheme.labelMedium),
-              const SizedBox(height: 12),
-              Text('$votes건', style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                'Votes',
+                style: Theme.of(
+                  context,
+                ).textTheme.labelMedium?.copyWith(fontSize: 12),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '$votes건',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ],
@@ -353,27 +418,22 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
+  // 정보 그리드: 카드 제거, 깔끔한 텍스트 배치
   Widget _buildInfoGrid(
     BuildContext context, {
     required List<_InfoItem> items,
   }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
-        border: Border.all(color: OakeyTheme.borderLine),
-        boxShadow: OakeyTheme.cardShadow,
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: GridView.builder(
         shrinkWrap: true,
         padding: EdgeInsets.zero,
         physics: const NeverScrollableScrollPhysics(),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
-          childAspectRatio: 2.5,
-          mainAxisSpacing: 12,
+          childAspectRatio: 2.8,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 10,
         ),
         itemCount: items.length,
         itemBuilder: (context, index) => Column(
@@ -382,14 +442,21 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           children: [
             Text(
               items[index].label,
-              style: Theme.of(context).textTheme.labelSmall,
+              style: const TextStyle(
+                fontSize: OakeyTheme.fontSizeXS,
+                fontWeight: FontWeight.w600,
+                color: OakeyTheme.textHint,
+                letterSpacing: 0.5,
+              ),
             ),
             const SizedBox(height: 6),
             Text(
               items[index].value,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyLarge?.copyWith(color: OakeyTheme.primaryDeep),
+              style: const TextStyle(
+                fontSize: OakeyTheme.fontSizeM,
+                fontWeight: FontWeight.w800,
+                color: OakeyTheme.primaryDeep,
+              ),
             ),
           ],
         ),
@@ -397,22 +464,25 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
+  // 플레이버 태그: 배경에 바로 칩 배치
   Widget _buildFlavorTags(List<String> tags) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
+        spacing: 10,
+        runSpacing: 10,
         children: tags
             .map(
               (tag) => Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: OakeyTheme.accentOrange.withOpacity(0.08),
-                  borderRadius: OakeyTheme.brTag,
+                  color: OakeyTheme.accentOrange.withOpacity(
+                    0.08,
+                  ), // 배경색이랑 어울리는 옅은 베이지
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   tag,
@@ -429,23 +499,14 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  Widget _buildTasteProfileCard(BuildContext context) {
-    final List<double> values = [0.2, 0.6, 0.4, 0.7, 0.3];
+  // 맛 차트: 카드 제거, 차트만 덩그러니 (네가 원한 대로)
+  Widget _buildTasteProfileChart(BuildContext context) {
+    final List<double> values = [0.2, 0.6, 0.4, 0.7, 0.9];
     final List<String> labels = ['Sweet', 'Fruit', 'Spicy', 'Woody', 'Smoky'];
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(vertical: 30),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
-        border: Border.all(color: OakeyTheme.borderLine),
-        boxShadow: OakeyTheme.cardShadow,
-      ),
-      child: Center(
-        child: CustomPaint(
-          size: const Size(220, 220),
-          painter: RadarChartPainter(values: values, labels: labels),
-        ),
+    return Center(
+      child: CustomPaint(
+        size: const Size(220, 220),
+        painter: RadarChartPainter(values: values, labels: labels),
       ),
     );
   }
@@ -456,7 +517,10 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text('Tasting Note', style: Theme.of(context).textTheme.titleMedium),
+          const Text(
+            'Tasting Note',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+          ),
           Row(
             children: [
               if (_isNoteSaved) ...[
@@ -491,10 +555,10 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
   Widget _buildActionButton(IconData icon, String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(OakeyTheme.radiusXS),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
@@ -513,34 +577,38 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
+  // 입력창: 입력 필드 자체의 박스 디자인은 유지 (안 그러면 글쓰기 힘드니까)
   Widget _buildTastingNoteInputBox(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
+        color: Colors.white, // 입력창은 흰색 유지
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: OakeyTheme.borderLine),
-        boxShadow: OakeyTheme.cardShadow,
+        // 그림자 살짝 빼서 카드 느낌 줄임
       ),
       child: TextField(
         controller: _noteController,
         focusNode: _noteFocusNode,
         minLines: 3,
         maxLines: null,
+        style: const TextStyle(height: 1.5),
         decoration: const InputDecoration(
-          hintText: '나만의 테이스팅 노트를 작성하세요.',
+          hintText: '이 위스키의 맛과 향을 기록해보세요.',
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           filled: false,
           isDense: true,
+          hintStyle: TextStyle(color: Colors.grey, fontSize: 14),
         ),
       ),
     );
   }
 }
 
+// 레이더 차트 페인터랑 정보 모델 클래스는 그대로 유지
 class RadarChartPainter extends CustomPainter {
   final List<double> values;
   final List<String> labels;
@@ -613,16 +681,16 @@ class RadarChartPainter extends CustomPainter {
     for (int i = 0; i < labels.length; i++) {
       final angle = i * angleStep - math.pi / 2;
       final textOffset = Offset(
-        center.dx + (radius + 15) * math.cos(angle),
-        center.dy + (radius + 15) * math.sin(angle),
+        center.dx + (radius + 20) * math.cos(angle), // 텍스트 간격 살짝 넓힘
+        center.dy + (radius + 20) * math.sin(angle),
       );
       final textPainter = TextPainter(
         text: TextSpan(
           text: labels[i],
           style: const TextStyle(
             color: OakeyTheme.textSub,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
+            fontSize: OakeyTheme.fontSizeS,
+            fontWeight: FontWeight.w600,
           ),
         ),
         textDirection: TextDirection.ltr,
