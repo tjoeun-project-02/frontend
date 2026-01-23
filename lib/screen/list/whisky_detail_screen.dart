@@ -108,25 +108,27 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     int currentUserId = UserController.to.userId.value;
     if (currentUserId == 0) currentUserId = 1;
 
-    // 1. 로컬 DB 저장
     await _dbHelper.saveNote(widget.whisky.wsId, content, currentUserId);
 
-    // 2. 서버 저장 (등록 vs 수정 분기 처리)
     bool serverSuccess = false;
 
-    // 서버에 이미 쓴 글이 있는지 확인
-    int? commentId = await ApiService.getMyCommentId(widget.whisky.wsId);
+    // 1. 기존 댓글 ID 조회
+    int? existingId = await ApiService.getMyCommentId(widget.whisky.wsId);
 
-    if (commentId != null) {
-      // 글이 있으면 -> 수정(PUT)
-      serverSuccess = await ApiService.updateNote(commentId, content);
+    if (existingId != null) {
+      // 2-A. 수정 로직
+      serverSuccess = await ApiService.updateNote(
+        commentId: existingId, // 이 부분을 이름과 함께 넣어주세요
+      content: content,
+    );
     } else {
-      // 글이 없으면 -> 등록(POST)
-      serverSuccess = await ApiService.insertNote(
-        widget.whisky.wsId,
-        currentUserId,
-        content,
+      // 2-B. 등록 로직 (타입 불일치 해결)
+      final int? newId = await ApiService.insertNote(
+        wsId: widget.whisky.wsId, // Named parameter 사용
+        userId: currentUserId,
+        content: content,
       );
+      serverSuccess = (newId != null); // ID가 있으면 성공으로 판단
     }
 
     setState(() => _isNoteSaved = true);
@@ -151,7 +153,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     // 1. 서버 데이터 삭제 시도
     int? commentId = await ApiService.getMyCommentId(widget.whisky.wsId);
     if (commentId != null) {
-      serverSuccess = await ApiService.deleteNote(commentId);
+      serverSuccess = await ApiService.deleteNote(commentId: commentId);
     }
 
     // 2. 로컬 DB 삭제

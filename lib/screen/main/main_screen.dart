@@ -112,7 +112,7 @@ class MainScreen extends StatelessWidget {
               Icons.camera_alt_outlined,
               color: Color(0xFF8D776D),
             ),
-            onPressed: () => controller.logoutAndGoToLogin(),
+            onPressed: () => {},
           ),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(vertical: 15),

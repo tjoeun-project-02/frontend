@@ -14,6 +14,7 @@ class ApiService {
     if (withAuth) {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('accessToken');
+      print("✅ APIService 헤더에 토큰 추가: $token");
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
       }
@@ -80,7 +81,10 @@ class ApiService {
         headers: headers,
         body: jsonEncode({'wsId': wsId, 'userId': userId, 'content': content}),
       );
-
+      print('🚀 요청 전송: ${url.toString()}');
+      print('📦 요청 바디: ${jsonEncode({'wsId': wsId, 'userId': userId, 'content': content})}');
+      print('📥 서버 응답 코드: ${response.statusCode}');
+      print('📥 서버 응답 바디: ${response.body}');
       if (response.statusCode == 200 || response.statusCode == 201) {
         final String bodyText = utf8.decode(response.bodyBytes).trim();
 
