@@ -58,8 +58,24 @@ class ApiService {
     }
     return null;
   }
+  static Future<List<Map<String, dynamic>>> fetchAllMyNotes() async {
+    final url = Uri.parse('$baseUrl/comments/my'); // 백엔드 @GetMapping("/my")와 일치
+    try {
+      final headers = await _buildHeaders(withAuth: true);
+      final response = await http.get(url, headers: headers);
 
-  // 노트 등록
+      if (response.statusCode == 200) {
+        // 한글 깨짐 방지를 위해 utf8.decode 사용
+        final List<dynamic> list = jsonDecode(utf8.decode(response.bodyBytes));
+        return list.cast<Map<String, dynamic>>();
+      }
+    } catch (e) {
+      print('노트 로드 에러: $e');
+    }
+    return [];
+  }
+
+  // 노트 등록(POST) -> 서버에서 생성된 commentId를 받을 수 있으면 리턴
   static Future<int?> insertNote({
     required int wsId,
     required int userId,
@@ -74,26 +90,27 @@ class ApiService {
         body: jsonEncode({'wsId': wsId, 'userId': userId, 'content': content}),
       );
 
+      // 1. 상태 코드가 200(성공)이면 일단 서버 저장은 성공한 것임!
       if (response.statusCode == 200 || response.statusCode == 201) {
-        final String bodyText = utf8.decode(response.bodyBytes).trim();
-        if (bodyText.isEmpty) return null;
+        print('✅ 서버 저장 성공');
 
-        final dynamic decoded = jsonDecode(bodyText);
-        if (decoded is Map) {
-          final dynamic id = decoded['commentId'] ?? decoded['id'];
-          return int.tryParse(id?.toString() ?? '');
+        final String bodyText = utf8.decode(response.bodyBytes).trim();
+
+        // 2. 만약 서버가 ID가 아닌 "댓글이 등록되었습니다" 같은 문자열을 준다면
+        // JSON 파싱을 시도하지 말고 그냥 성공의 의미로 1(임의값)을 반환
+        try {
+          final dynamic decoded = jsonDecode(bodyText);
+          if (decoded is Map) return int.tryParse((decoded['commentId'] ?? 1).toString());
+          return int.tryParse(decoded.toString()) ?? 1;
+        } catch (e) {
+          // 파싱 에러가 나더라도 여기 왔다는 건 이미 statusCode가 200이라는 뜻!
+          return 1; // 성공했다는 신호로 1 반환
         }
-        if (decoded is int) return decoded;
-        if (decoded is List && decoded.isNotEmpty) {
-          final dynamic id = decoded[0]['commentId'] ?? decoded[0]['id'];
-          return int.tryParse(id?.toString() ?? '');
-        }
-        return null;
       }
     } catch (e) {
       print('등록 에러: $e');
     }
-    return null;
+    return null; // 아예 네트워크 에러 등이 났을 때만 null
   }
 
   // 노트 수정

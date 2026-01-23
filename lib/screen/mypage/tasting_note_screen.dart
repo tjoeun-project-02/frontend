@@ -1,79 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
+import '../../controller/tasting_note_controller.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
 import '../list/whisky_detail_screen.dart';
 import '../../models/whisky.dart';
 
-class TastingNoteScreen extends StatefulWidget {
+class TastingNoteScreen extends StatelessWidget {
   const TastingNoteScreen({super.key});
 
   @override
-  State<TastingNoteScreen> createState() => _TastingNoteScreenState();
-}
-
-class _TastingNoteScreenState extends State<TastingNoteScreen> {
-  // 백엔드 연동 전 사용할 테이스팅 노트 목업 데이터
-  List<Map<String, dynamic>> notes = [
-    {
-      'ws_id': 101,
-      'ws_name': '발베니 14년 캐리비안 캐스크',
-      'ws_name_en': 'Balvenie 14Y Caribbean Cask',
-      'note_content':
-          '럼 캐스크 숙성 특유의 달콤한 열대과일 향이 돋보입니다. 끝맛이 부드러워서 입문용으로 정말 좋네요...',
-      'ws_distillery': 'SPEYSIDE',
-      'ws_category': '싱글몰트',
-      'ws_rating': 4.3,
-      'flavor_tags': ['달콤한', '열대과일', '부드러움'],
-    },
-    {
-      'ws_id': 102,
-      'ws_name': '와일드 터키 101',
-      'ws_name_en': 'Wild Turkey 101',
-      'note_content':
-          '강렬한 타격감과 바닐라 향이 일품입니다. 하이볼로 마셔도 향이 죽지 않아서 자주 찾게 될 것 같아요.',
-      'ws_distillery': 'KENTUCKY',
-      'ws_category': '버번',
-      'ws_rating': 4.1,
-      'flavor_tags': ['강렬함', '바닐라', '스파이시'],
-    },
-  ];
-
-  // 테이스팅 노트를 목록에서 제거하는 함수
-  void _deleteNote(int index) {
-    setState(() => notes.removeAt(index));
-    Get.snackbar(
-      "삭제 완료",
-      "노트가 삭제되었습니다.",
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
-      colorText: Colors.white,
-      duration: const Duration(seconds: 1),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // 컨트롤러 주입
+    final controller = Get.put(TastingNoteController());
+
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const OakeyDetailAppBar(), // 공통 상단바 위젯
-            _buildHeader("Tasting Notes", notes.length), // 페이지 타이틀 및 개수 배지
+            const OakeyDetailAppBar(),
+            // 제목 옆의 숫자 배지도 실시간 반영되도록 Obx 처리
+            Obx(() => _buildHeader("Tasting Notes", controller.notes.length)),
+
             Expanded(
-              child: notes.isEmpty
-                  ? _buildEmptyState("작성된 노트가 없습니다.") // 데이터가 없을 때의 화면
-                  : ListView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 15,
-                      ),
-                      itemCount: notes.length,
-                      itemBuilder: (context, index) =>
-                          _buildNoteCard(index, notes[index]),
-                    ),
+              child: Obx(() {
+                if (controller.isLoading.value) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (controller.notes.isEmpty) {
+                  return _buildEmptyState("작성된 노트가 없습니다.");
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(20),
+                  itemCount: controller.notes.length,
+                  itemBuilder: (context, index) {
+                    // 인자를 2개만 넘기도록 수정 (또는 함수 정의를 3개로 수정)
+                    return _buildNoteCard(context, controller, index);
+                  },
+                );
+              }),
             ),
           ],
         ),
@@ -117,119 +86,51 @@ class _TastingNoteScreenState extends State<TastingNoteScreen> {
   }
 
   // 테이스팅 노트 전용 카드 위젯 빌더
-  Widget _buildNoteCard(int index, Map<String, dynamic> data) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
-        boxShadow: OakeyTheme.cardShadow,
-        border: Border.all(color: OakeyTheme.borderLine),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: OakeyTheme.surfaceMuted,
-                  borderRadius: BorderRadius.circular(12),
+  Widget _buildNoteCard(BuildContext context, TastingNoteController controller, int index) {
+    final data = controller.notes[index];
+    return InkWell(
+      onTap: () => controller.goToDetail(data), // index 대신 data 맵 전체를 넘김
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(data['wsImage'] ?? '', width: 50, height: 50, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const Icon(Icons.wine_bar, size: 30)),
                 ),
-                child: const Icon(
-                  Icons.local_drink_rounded,
-                  color: OakeyTheme.primarySoft,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      data['ws_name'],
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Text(
-                      data['ws_name_en'],
-                      style: TextStyle(
-                        color: OakeyTheme.textHint,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // 디자인이 가미된 팝업 메뉴 버튼
-              PopupMenuButton<String>(
-                icon: const Icon(Icons.more_horiz, color: OakeyTheme.textHint),
-                offset: const Offset(0, 40), // 버튼 아래쪽으로 살짝 내려서 표시
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(15),
-                ), // 팝업창 모서리 라운드
-                elevation: 4, // 그림자 깊이
-                onSelected: (value) {
-                  if (value == 'view') {
-                    Get.to(
-                      () => WhiskyDetailScreen(whisky: Whisky.fromDbMap(data)),
-                    );
-                  }
-                  if (value == 'delete') _deleteNote(index);
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'view',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.visibility_outlined,
-                          size: 18,
-                          color: OakeyTheme.primaryDeep,
-                        ),
-                        SizedBox(width: 10),
-                        Text('상세보기', style: TextStyle(fontSize: 14)),
-                      ],
-                    ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(data['wsNameKo'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(data['wsName'] ?? '', style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
                   ),
-                  const PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.delete_outline_rounded,
-                          size: 18,
-                          color: Colors.red,
-                        ),
-                        SizedBox(width: 10),
-                        Text(
-                          '삭제하기',
-                          style: TextStyle(fontSize: 14, color: Colors.red),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(color: OakeyTheme.borderLine),
-          const SizedBox(height: 16),
-          Text(
-            data['note_content'],
-            style: TextStyle(
-              color: OakeyTheme.textMain,
-              fontSize: OakeyTheme.fontSizeS,
-              height: 1.6,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
+                  onPressed: () {
+                    // 삭제 확인 다이얼로그 호출
+                    _showDeleteConfirmDialog(context, controller, data['commentId'], index);
+                  },
+                ),
+              ],
             ),
-          ), // 노트 본문
-        ],
+            const Divider(height: 32),
+            Text(data['content'] ?? '', style: const TextStyle(height: 1.5)),
+          ],
+        ),
       ),
     );
   }
@@ -253,6 +154,34 @@ class _TastingNoteScreenState extends State<TastingNoteScreen> {
               fontWeight: FontWeight.w600,
               color: OakeyTheme.textHint,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, TastingNoteController controller, int? commentId, int index) {
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: OakeyTheme.surfacePure,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          "노트 삭제",
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text("작성하신 테이스팅 노트를 삭제하시겠습니까?\n삭제된 내용은 복구할 수 없습니다."),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(), // 다이얼로그 닫기
+            child: Text("취소", style: TextStyle(color: OakeyTheme.textHint)),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back(); // 다이얼로그 먼저 닫기
+              controller.deleteNote(commentId, index); // 실제 삭제 로직 실행
+
+            },
+            child: const Text("삭제", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

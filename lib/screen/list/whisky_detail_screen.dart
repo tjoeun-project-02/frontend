@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
 import '../../models/whisky.dart';
-import '../../services/db_helper.dart';
 import '../../services/api_service.dart';
 import '../../controller/user_controller.dart';
 
@@ -20,7 +19,6 @@ class WhiskyDetailScreen extends StatefulWidget {
 class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _noteFocusNode = FocusNode();
-  final DBHelper _dbHelper = DBHelper();
 
   bool _isNoteSaved = false;
   bool _isEditing = false;
@@ -28,22 +26,19 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   @override
   void initState() {
     super.initState();
+    resetNoteState();
     _loadMyNote(); // 화면 켜질 때 데이터 불러오기
   }
-
-  // 로컬 + 서버 데이터 불러오기 (동기화)
+  void resetNoteState() {
+    setState(() {
+      _noteController.clear();
+      _isNoteSaved = false;
+      _isEditing = false;
+    });
+  }
+  // 서버 데이터 불러오기
   Future<void> _loadMyNote() async {
-    // 1. 로컬 DB에서 먼저 불러오기 (빠른 로딩)
-    final localData = await _dbHelper.getNote(widget.whisky.wsId);
-    if (localData != null) {
-      setState(() {
-        _noteController.text = localData['comment_body'];
-        _isNoteSaved = true;
-        _isEditing = false;
-      });
-    }
-
-    // 2. 로그인 상태면 서버 데이터도 확인 (최신 데이터 동기화)
+    // 로그인 상태 확인
     int currentUserId = 0;
     try {
       currentUserId = UserController.to.userId.value;
@@ -57,21 +52,11 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
       if (serverData != null) {
         String serverContent = serverData['content'];
-
-        // 로컬과 내용이 다르면 서버 내용으로 덮어쓰기
-        if (localData == null || localData['comment_body'] != serverContent) {
-          setState(() {
-            _noteController.text = serverContent;
-            _isNoteSaved = true;
-            _isEditing = false;
-          });
-          // 로컬 DB도 업데이트
-          await _dbHelper.saveNote(
-            widget.whisky.wsId,
-            serverContent,
-            currentUserId,
-          );
-        }
+        setState(() {
+          _noteController.text = serverContent;
+          _isNoteSaved = true;
+          _isEditing = false;
+        });
       }
     }
   }
@@ -98,7 +83,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     }
   }
 
-  // 저장 로직 (로컬 + 서버)
+  // 저장 로직 (서버만)
   Future<void> _saveProcess(String message) async {
     final String content = _noteController.text.trim();
     if (content.isEmpty) return;
@@ -108,8 +93,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     int currentUserId = UserController.to.userId.value;
     if (currentUserId == 0) currentUserId = 1;
 
-    await _dbHelper.saveNote(widget.whisky.wsId, content, currentUserId);
-
     bool serverSuccess = false;
 
     // 1. 기존 댓글 ID 조회
@@ -118,24 +101,26 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     if (existingId != null) {
       // 2-A. 수정 로직
       serverSuccess = await ApiService.updateNote(
-        commentId: existingId, // 이 부분을 이름과 함께 넣어주세요
-      content: content,
-    );
+        commentId: existingId,
+        content: content,
+      );
     } else {
-      // 2-B. 등록 로직 (타입 불일치 해결)
+      // 2-B. 등록 로직
       final int? newId = await ApiService.insertNote(
-        wsId: widget.whisky.wsId, // Named parameter 사용
+        wsId: widget.whisky.wsId,
         userId: currentUserId,
         content: content,
       );
-      serverSuccess = (newId != null); // ID가 있으면 성공으로 판단
+      serverSuccess = (newId != null);
     }
 
-    setState(() => _isNoteSaved = true);
+    if (serverSuccess) {
+      setState(() => _isNoteSaved = true);
+    }
 
     Get.snackbar(
       _isEditing ? "수정 완료" : "등록 완료",
-      serverSuccess ? "$message (서버 반영됨)" : "$message (서버 실패: 로컬 저장됨)",
+      serverSuccess ? message : "서버 저장 실패",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
       colorText: Colors.white,
@@ -144,30 +129,29 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 삭제 로직 (로컬 + 서버)
+  // 삭제 로직 (서버만)
   Future<void> _handleDelete() async {
     FocusScope.of(context).unfocus();
 
     bool serverSuccess = false;
 
-    // 1. 서버 데이터 삭제 시도
+    // 서버 데이터 삭제 시도
     int? commentId = await ApiService.getMyCommentId(widget.whisky.wsId);
     if (commentId != null) {
       serverSuccess = await ApiService.deleteNote(commentId: commentId);
     }
 
-    // 2. 로컬 DB 삭제
-    await _dbHelper.deleteNote(widget.whisky.wsId);
-
-    setState(() {
-      _noteController.clear();
-      _isNoteSaved = false;
-      _isEditing = false;
-    });
+    if (serverSuccess) {
+      setState(() {
+        _noteController.clear();
+        _isNoteSaved = false;
+        _isEditing = false;
+      });
+    }
 
     Get.snackbar(
       "삭제 완료",
-      serverSuccess ? "테이스팅 노트가 삭제되었습니다." : "내 폰에서 삭제됨 (서버 삭제 실패)",
+      serverSuccess ? "테이스팅 노트가 삭제되었습니다." : "서버 삭제 실패",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
       colorText: Colors.white,

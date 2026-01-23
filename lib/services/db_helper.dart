@@ -106,18 +106,6 @@ class DBHelper {
             tasteProfile TEXT
           )
         ''');
-
-        // 테이스팅 노트 테이블 생성
-        await db.execute('''
-          CREATE TABLE tasting_notes(
-            comment_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            ws_id INTEGER,
-            comment_body TEXT,
-            update_date TEXT,
-            user_id INTEGER,
-            FOREIGN KEY(ws_id) REFERENCES whiskies(wsId)
-          )
-        ''');
       },
     );
   }
@@ -155,67 +143,5 @@ class DBHelper {
       whisky.toDbMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-  }
-
-  // 마이페이지용 노트와 위스키 정보 합쳐서 조회
-  Future<List<Map<String, dynamic>>> getAllTastingNotes() async {
-    final db = await database;
-    return await db.rawQuery('''
-      SELECT 
-        t.comment_id, t.comment_body, t.update_date,
-        w.wsId, w.wsNameKo, w.wsName, w.wsImage, w.wsCategory, 
-        w.wsRating, w.wsVoteCnt, w.wsAbv, w.wsAge, w.tags, w.tasteProfile
-      FROM tasting_notes t
-      INNER JOIN whiskies w ON t.ws_id = w.wsId
-      ORDER BY t.update_date DESC
-    ''');
-  }
-
-  // 특정 위스키의 테이스팅 노트 조회
-  Future<Map<String, dynamic>?> getNote(int wsId) async {
-    final db = await database;
-    final List<Map<String, dynamic>> maps = await db.query(
-      'tasting_notes',
-      where: 'ws_id = ?',
-      whereArgs: [wsId],
-      limit: 1,
-    );
-
-    if (maps.isNotEmpty) {
-      return maps.first;
-    }
-    return null;
-  }
-
-  // 테이스팅 노트 등록 및 수정 userId 파라미터 추가됨
-  Future<void> saveNote(int wsId, String body, int userId) async {
-    final db = await database;
-
-    final existingNote = await getNote(wsId);
-    final String now = DateTime.now().toIso8601String();
-
-    if (existingNote == null) {
-      // 없으면 새로 등록할 때 유저 ID 포함
-      await db.insert('tasting_notes', {
-        'ws_id': wsId,
-        'comment_body': body,
-        'update_date': now,
-        'user_id': userId,
-      });
-    } else {
-      // 있으면 내용 수정 유저 ID는 불변
-      await db.update(
-        'tasting_notes',
-        {'comment_body': body, 'update_date': now},
-        where: 'ws_id = ?',
-        whereArgs: [wsId],
-      );
-    }
-  }
-
-  // 테이스팅 노트 삭제
-  Future<void> deleteNote(int wsId) async {
-    final db = await database;
-    await db.delete('tasting_notes', where: 'ws_id = ?', whereArgs: [wsId]);
   }
 }
