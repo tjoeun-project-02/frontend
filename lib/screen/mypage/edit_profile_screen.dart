@@ -10,6 +10,9 @@ class EditProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nicknameController = TextEditingController(text: UserController.to.nickname.value);
+    final currentPwController = TextEditingController();
+    final newPwController = TextEditingController();
+    final confirmPwController = TextEditingController();
     // 사용자의 현재 데이터
     final String currentEmail = UserController.to.email.value;
     // 카카오 로그인 여부 (true일 경우 비밀번호 수정 비활성화)
@@ -63,24 +66,67 @@ class EditProfileScreen extends StatelessWidget {
                         description: "안전한 서비스 이용을 위해 정기적으로 변경해 주세요",
                         children: [
                           _buildCustomTextField(
+                            controller: currentPwController, // 연결
                             hint: "현재 비밀번호",
                             isPassword: true,
                           ),
                           const SizedBox(height: 12),
                           _buildCustomTextField(
+                            controller: newPwController, // 연결
                             hint: "새 비밀번호",
                             isPassword: true,
                           ),
                           const SizedBox(height: 12),
                           _buildCustomTextField(
+                            controller: confirmPwController, // 연결
                             hint: "비밀번호 확인",
                             isPassword: true,
                           ),
                         ],
                       ),
                     if (!isKakaoUser) const SizedBox(height: 40) else const SizedBox(height: 20),
+
                     // 변경사항 저장 버튼
-                    _buildSaveButton(),
+                    _buildSaveButton(() async {
+                      try {
+                        bool isNicknameChanged = false;
+                        bool isPasswordChanged = false;
+
+                        // 1. 닉네임 변경 시도
+                        if (nicknameController.text.trim() != UserController.to.nickname.value) {
+                          print("닉네임 변경 시도 중...");
+                          isNicknameChanged = await UserController.to.updateNickname(nicknameController.text.trim());
+                          print("닉네임 변경 결과: $isNicknameChanged");
+                        }
+
+                        // 2. 비밀번호 변경 시도
+                        if (!isKakaoUser && currentPwController.text.isNotEmpty) {
+                          print("비밀번호 변경 시도 중...");
+                          isPasswordChanged = await UserController.to.updatePassword(
+                            currentPwController.text,
+                            newPwController.text,
+                            confirmPwController.text,
+                          );
+                          print("비밀번호 변경 결과: $isPasswordChanged");
+                        }
+
+                        // 3. 화면 이동 판별
+                        if (isNicknameChanged || isPasswordChanged) {
+                          print("성공 감지! 이전 화면으로 이동합니다.");
+                          // Get.back()이 작동하지 않는 경우를 대비해 확실한 닫기 명령 사용
+                          Get.until((route) => Get.currentRoute == '/MainScreen' || route.isFirst);
+                          // 위 방법이 복잡하면 단순히 아래 한 줄만 써보세요.
+                          // Get.back();
+                        } else {
+                          if (nicknameController.text.trim() == UserController.to.nickname.value && currentPwController.text.isEmpty) {
+                            Get.snackbar("알림", "변경사항이 없습니다.");
+                          }
+                        }
+                      } catch (e) {
+                        print("저장 버튼 실행 중 에러 발생: $e");
+                        Get.snackbar("오류", "작업 중 에러가 발생했습니다.");
+                      }
+                    })
                   ],
                 ),
               ),
@@ -192,9 +238,9 @@ class EditProfileScreen extends StatelessWidget {
   }
 
   // 변경사항 저장 버튼 빌더
-  Widget _buildSaveButton() {
+  Widget _buildSaveButton(VoidCallback onTap) {
     return ElevatedButton(
-      onPressed: () => Get.back(),
+      onPressed: onTap,
       style: ElevatedButton.styleFrom(
         backgroundColor: OakeyTheme.primaryDeep,
         minimumSize: const Size(double.infinity, 60),

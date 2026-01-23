@@ -11,6 +11,7 @@ class UserController extends GetxController {
   var isLoggedIn = false.obs;
   var loginType = "email".obs;
   var email = "".obs;
+  var token = "".obs;
 
   @override
   void onInit() {
@@ -21,20 +22,66 @@ class UserController extends GetxController {
   Future<void> loadUserData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final token = prefs.getString('accessToken');
-    isLoggedIn.value = (token != null && token.isNotEmpty);
+    // 1. SharedPreferences에서 토큰을 읽어 변수에 저장
+    final storedToken = prefs.getString('accessToken') ?? "";
+    token.value = storedToken;
 
+    isLoggedIn.value = storedToken.isNotEmpty;
     nickname.value = prefs.getString('nickname') ?? "고객";
     userId.value = prefs.getInt('userId') ?? 0;
     loginType.value = prefs.getString('loginType') ?? "email";
-
-    // 🔥 이메일 불러오기 추가
-    // 카카오 유저라서 null로 저장했다면 빈 문자열("")이 들어갑니다.
     email.value = prefs.getString('email') ?? "";
 
-    print("✅ 전역 유저 정보 갱신 완료: ${nickname.value} (이메일: ${email.value})");
+    print("✅ 전역 유저 정보 갱신 완료: ${nickname.value} (토큰 유무: ${token.value.isNotEmpty})");
   }
 
+  Future<bool> updateNickname(String newNickname) async {
+    try {
+      final updatedData = await AuthService.updateProfile(newNickname);
+
+      if (updatedData != null) {
+        nickname.value = updatedData['nickname'];
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('nickname', updatedData['nickname']);
+
+        Get.snackbar("성공", "닉네임이 변경되었습니다.");
+        return true; // 성공 반환
+      }
+    } catch (e) {
+      print("Nickname Update Error: $e");
+    }
+    return false; // 실패 반환
+  }
+
+  // 2. 비밀번호 변경 메서드 추가
+  Future<bool> updatePassword(String currentPw, String newPw, String confirmPw) async {
+    if (currentPw.isEmpty || newPw.isEmpty || confirmPw.isEmpty) {
+      Get.snackbar("알림", "모든 필드를 입력해 주세요.");
+      return false;
+    }
+    if (newPw != confirmPw) {
+      Get.snackbar("알림", "새 비밀번호가 일치하지 않습니다.");
+      return false;
+    }
+
+    try {
+      // AuthService.changePassword도 bool을 반환해야 합니다.
+      bool success = await AuthService.changePassword(currentPw, newPw);
+
+      if (success) {
+        Get.snackbar("성공", "비밀번호가 변경되었습니다.");
+        return true; // 성공 시 true 반환
+      } else {
+        Get.snackbar("실패", "현재 비밀번호가 올바르지 않습니다.");
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar("오류", "서버 통신 중 에러가 발생했습니다.");
+      return false;
+    }
+  }
+  
   void logout() async {
     await AuthService.logout();
     nickname.value = "고객";

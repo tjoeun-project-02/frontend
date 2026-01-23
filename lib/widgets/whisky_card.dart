@@ -2,22 +2,11 @@ import 'package:flutter/material.dart';
 import '../Directory/core/theme.dart';
 
 class WhiskyListCard extends StatelessWidget {
-  // 위스키 데이터
   final Map<String, dynamic> whisky;
-
-  // 카드 전체 클릭 이벤트
   final VoidCallback? onTap;
-
-  // 찜 버튼 클릭 이벤트
   final VoidCallback? onFavoriteTap;
-
-  // 찜 상태 값
   final bool? isFavorite;
-
-  // 카드 외부 여백
   final EdgeInsetsGeometry? margin;
-
-  // 선택된 필터 목록
   final Set<String> highlightFilters;
 
   const WhiskyListCard({
@@ -32,9 +21,12 @@ class WhiskyListCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 위스키 기본 정보 추출
+    // 데이터 추출 및 타입 변환
     final String wsDistillery = (whisky['ws_distillery'] ?? '').toString();
-    final String wsName = (whisky['ws_name'] ?? '이름 없음').toString();
+    final String wsCategory = (whisky['ws_category'] ?? '').toString();
+    final String wsNameKo = (whisky['ws_name'] ?? '이름 없음').toString(); // 한글명
+    final String wsNameEn = (whisky['ws_name_en'] ?? '')
+        .toString(); // 영문명 (추가됨)
     final double wsRating =
         double.tryParse(whisky['ws_rating']?.toString() ?? '0.0') ?? 0.0;
     final bool fav = isFavorite ?? (whisky['is_liked'] == true);
@@ -42,13 +34,13 @@ class WhiskyListCard extends StatelessWidget {
       whisky['flavor_tags'] ?? [],
     );
 
-    // 현재 테마 텍스트 스타일 참조
+    // 테마 스타일
     final textTheme = Theme.of(context).textTheme;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        // 카드 전체 스타일
+        // 카드 외관 스타일
         margin: margin ?? const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -58,12 +50,12 @@ class WhiskyListCard extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            // 카드 메인 콘텐츠 영역
+            // 메인 콘텐츠 레이아웃
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 위스키 이미지 영역
+                  // 좌측: 위스키 이미지/아이콘 영역
                   Container(
                     width: 90,
                     alignment: Alignment.center,
@@ -79,15 +71,15 @@ class WhiskyListCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 16),
 
-                  // 위스키 정보 텍스트 영역
+                  // 우측: 위스키 정보 텍스트 영역
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        // 증류소 이름 표시
+                        // 카테고리
                         Text(
-                          wsDistillery.isEmpty ? '-' : wsDistillery,
+                          wsCategory.isEmpty ? '-' : wsCategory,
                           style: textTheme.labelSmall?.copyWith(
                             color: OakeyTheme.textHint,
                             fontWeight: FontWeight.w600,
@@ -95,9 +87,9 @@ class WhiskyListCard extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
 
-                        // 위스키 이름 표시
+                        // 위스키 한글 이름
                         Text(
-                          wsName,
+                          wsNameKo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: textTheme.bodyLarge?.copyWith(
@@ -105,13 +97,28 @@ class WhiskyListCard extends StatelessWidget {
                             color: OakeyTheme.textMain,
                           ),
                         ),
+
+                        // [추가] 위스키 영문 이름 (작게)
+                        if (wsNameEn.isNotEmpty) ...[
+                          const SizedBox(height: 0),
+                          Text(
+                            wsNameEn,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: textTheme.bodySmall?.copyWith(
+                              fontSize: OakeyTheme.fontSizeXS,
+                              color: OakeyTheme.textSub,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 4),
 
-                        // 별점 표시 영역
+                        // 별점 표시
                         _buildRatingRow(wsRating, textTheme),
                         const SizedBox(height: 8),
 
-                        // 맛 태그 목록 영역
+                        // 맛 태그 목록
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
@@ -128,7 +135,7 @@ class WhiskyListCard extends StatelessWidget {
               ),
             ),
 
-            // 찜하기 버튼 오른쪽 상단 고정
+            // 우측 상단 찜하기 버튼
             Positioned(
               top: -2,
               right: 0,
@@ -147,7 +154,7 @@ class WhiskyListCard extends StatelessWidget {
     );
   }
 
-  // 별점 표시 위젯
+  // 별점 UI 빌더
   Widget _buildRatingRow(double rating, TextTheme textTheme) {
     return Row(
       children: [
@@ -168,7 +175,7 @@ class WhiskyListCard extends StatelessWidget {
     );
   }
 
-  // 맛 태그 표시 위젯
+  // 태그 UI 빌더
   Widget _buildTag(String label, bool isHighlighted, TextTheme textTheme) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),

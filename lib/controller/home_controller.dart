@@ -14,13 +14,6 @@ class HomeController extends GetxController {
     super.onInit();
   }
 
-
-  // 로그아웃 로직 (카메라 버튼 예시로 쓰인 로직 그대로 유지)
-  void logoutAndGoToLogin() {
-    AuthService.logout();
-    Get.offAll(() => LoginScreen()); // Navigator 대신 GetX의 offAll 사용
-  }
-
   // 탭 변경
   void changeTabIndex(int index) {
     currentIndex.value = index;

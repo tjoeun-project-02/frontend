@@ -3,11 +3,15 @@ import 'dart:math' as math;
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
+import '../../models/whisky.dart';
+import '../../services/db_helper.dart';
+import '../../services/api_service.dart';
+import '../../controller/user_controller.dart';
 
 class WhiskyDetailScreen extends StatefulWidget {
-  final Map<String, dynamic> whiskyData;
+  final Whisky whisky;
 
-  const WhiskyDetailScreen({super.key, required this.whiskyData});
+  const WhiskyDetailScreen({super.key, required this.whisky});
 
   @override
   State<WhiskyDetailScreen> createState() => _WhiskyDetailScreenState();
@@ -16,9 +20,61 @@ class WhiskyDetailScreen extends StatefulWidget {
 class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _noteFocusNode = FocusNode();
+  final DBHelper _dbHelper = DBHelper();
 
   bool _isNoteSaved = false;
   bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMyNote(); // 화면 켜질 때 데이터 불러오기
+  }
+
+  // 로컬 + 서버 데이터 불러오기 (동기화)
+  Future<void> _loadMyNote() async {
+    // 1. 로컬 DB에서 먼저 불러오기 (빠른 로딩)
+    final localData = await _dbHelper.getNote(widget.whisky.wsId);
+    if (localData != null) {
+      setState(() {
+        _noteController.text = localData['comment_body'];
+        _isNoteSaved = true;
+        _isEditing = false;
+      });
+    }
+
+    // 2. 로그인 상태면 서버 데이터도 확인 (최신 데이터 동기화)
+    int currentUserId = 0;
+    try {
+      currentUserId = UserController.to.userId.value;
+    } catch (e) {
+      currentUserId = 0;
+    }
+
+    if (currentUserId > 0) {
+      // 서버에서 내 노트 가져오기
+      var serverData = await ApiService.fetchMyNote(widget.whisky.wsId);
+
+      if (serverData != null) {
+        String serverContent = serverData['content'];
+
+        // 로컬과 내용이 다르면 서버 내용으로 덮어쓰기
+        if (localData == null || localData['comment_body'] != serverContent) {
+          setState(() {
+            _noteController.text = serverContent;
+            _isNoteSaved = true;
+            _isEditing = false;
+          });
+          // 로컬 DB도 업데이트
+          await _dbHelper.saveNote(
+            widget.whisky.wsId,
+            serverContent,
+            currentUserId,
+          );
+        }
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -27,6 +83,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     super.dispose();
   }
 
+  // 노트 버튼 액션 (등록/수정 모드 전환)
   void _handleNoteAction() {
     if (!_isNoteSaved) {
       _saveProcess('테이스팅 노트가 등록되었습니다.');
@@ -41,24 +98,65 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     }
   }
 
-  void _saveProcess(String message) {
-    if (_noteController.text.trim().isEmpty) return;
+  // 저장 로직 (로컬 + 서버)
+  Future<void> _saveProcess(String message) async {
+    final String content = _noteController.text.trim();
+    if (content.isEmpty) return;
+
     FocusScope.of(context).unfocus();
+
+    int currentUserId = UserController.to.userId.value;
+    if (currentUserId == 0) currentUserId = 1;
+
+    // 1. 로컬 DB 저장
+    await _dbHelper.saveNote(widget.whisky.wsId, content, currentUserId);
+
+    // 2. 서버 저장 (등록 vs 수정 분기 처리)
+    bool serverSuccess = false;
+
+    // 서버에 이미 쓴 글이 있는지 확인
+    int? commentId = await ApiService.getMyCommentId(widget.whisky.wsId);
+
+    if (commentId != null) {
+      // 글이 있으면 -> 수정(PUT)
+      serverSuccess = await ApiService.updateNote(commentId, content);
+    } else {
+      // 글이 없으면 -> 등록(POST)
+      serverSuccess = await ApiService.insertNote(
+        widget.whisky.wsId,
+        currentUserId,
+        content,
+      );
+    }
+
     setState(() => _isNoteSaved = true);
 
     Get.snackbar(
       _isEditing ? "수정 완료" : "등록 완료",
-      message,
+      serverSuccess ? "$message (서버 반영됨)" : "$message (서버 실패: 로컬 저장됨)",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
       colorText: Colors.white,
       margin: const EdgeInsets.all(20),
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 2),
     );
   }
 
-  void _handleDelete() {
+  // 삭제 로직 (로컬 + 서버)
+  Future<void> _handleDelete() async {
     FocusScope.of(context).unfocus();
+
+    bool serverSuccess = false;
+
+    // 1. 서버 데이터 삭제 시도
+    int? commentId = await ApiService.getMyCommentId(widget.whisky.wsId);
+    if (commentId != null) {
+      serverSuccess = await ApiService.deleteNote(commentId);
+    }
+
+    // 2. 로컬 DB 삭제
+    await _dbHelper.deleteNote(widget.whisky.wsId);
+
     setState(() {
       _noteController.clear();
       _isNoteSaved = false;
@@ -67,15 +165,16 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
     Get.snackbar(
       "삭제 완료",
-      "테이스팅 노트가 삭제되었습니다.",
+      serverSuccess ? "테이스팅 노트가 삭제되었습니다." : "내 폰에서 삭제됨 (서버 삭제 실패)",
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
       colorText: Colors.white,
       margin: const EdgeInsets.all(20),
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 2),
     );
   }
 
+  // 맛 가이드 팝업
   void _showTasteHelp(BuildContext context) {
     showDialog(
       context: context,
@@ -84,19 +183,17 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           borderRadius: BorderRadius.circular(OakeyTheme.radiusM),
         ),
         backgroundColor: OakeyTheme.surfacePure,
-        title: Text(
-          'Taste Guide',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
+        title: Text('맛 가이드', style: Theme.of(context).textTheme.titleMedium),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHelpItem('Sweet', '설탕이나 꿀, 카라멜 같은 달콤한 풍미'),
-            _buildHelpItem('Fruit', '사과나 건포도 같은 상큼달콤한 과일 향'),
-            _buildHelpItem('Spicy', '시나몬이나 후추처럼 톡 쏘는 자극'),
-            _buildHelpItem('Woody', '숙성된 나무통에서 배어 나온 묵직한 향'),
-            _buildHelpItem('Smoky', '장작 타는 냄새나 훈제 요리의 스모키함'),
+            _buildHelpItem('FRUITY', '상큼하고 달콤한 과일의 풍미'),
+            _buildHelpItem('MALTY', '고소한 보리와 곡물의 풍미'),
+            _buildHelpItem('PEATY', '스모키하고 흙내음이 나는 피트 향'),
+            _buildHelpItem('SPICY', '후추나 향신료처럼 톡 쏘는 자극'),
+            _buildHelpItem('SWEET', '꿀, 바닐라, 카라멜 같은 달콤함'),
+            _buildHelpItem('WOODY', '오크통 숙성에서 오는 나무의 향'),
           ],
         ),
         actions: [
@@ -143,26 +240,23 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final String name = (widget.whiskyData['ws_name'] ?? 'Unknown').toString();
-    final String enName = (widget.whiskyData['ws_name_en'] ?? '').toString();
-    final String category = (widget.whiskyData['ws_category'] ?? '-')
-        .toString();
-    final String distillery = (widget.whiskyData['ws_distillery'] ?? '-')
-        .toString();
-    final String ageText = widget.whiskyData['ws_age'] == null
-        ? '-'
-        : '${widget.whiskyData['ws_age']}Y';
-    final String abvText = widget.whiskyData['ws_abv'] == null
-        ? '-'
-        : '${widget.whiskyData['ws_abv']}%';
-    final double rating =
-        double.tryParse(widget.whiskyData['ws_rating']?.toString() ?? '0.0') ??
-        0.0;
-    final int voteCnt =
-        int.tryParse(widget.whiskyData['ws_vote_cnt']?.toString() ?? '0') ?? 0;
-    final List<String> flavors = List<String>.from(
-      widget.whiskyData['flavor_tags'] ?? [],
-    );
+    // 위스키 객체 데이터
+    final whisky = widget.whisky;
+    final String name = whisky.wsNameKo.isNotEmpty
+        ? whisky.wsNameKo
+        : 'Unknown';
+    final String enName = whisky.wsName;
+    final String category = whisky.wsCategory.isNotEmpty
+        ? whisky.wsCategory
+        : '-';
+    final String distillery = whisky.wsDistillery.isNotEmpty
+        ? whisky.wsDistillery
+        : '-';
+    final String ageText = whisky.wsAge > 0 ? '${whisky.wsAge}Y' : 'NAS';
+    final String abvText = whisky.wsAbv > 0 ? '${whisky.wsAbv}%' : '-';
+    final String ratingStr = whisky.wsRating.toStringAsFixed(2);
+    final int voteCnt = whisky.wsVoteCnt;
+    final List<String> flavors = whisky.tags;
 
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
@@ -177,33 +271,27 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    // 1. 메인 정보 (카드 제거, 배경에 직접 배치)
-                    _buildMainWhiskyInfo(name, enName),
+                    _buildMainWhiskyInfo(name, enName, whisky.wsImage),
 
                     const SizedBox(height: 32),
-
-                    // 구분선 하나 싹 그어주고
                     const Divider(
                       color: Color(0xFFE0E0E0),
                       thickness: 1,
                       indent: 20,
                       endIndent: 20,
                     ),
-
                     const SizedBox(height: 32),
 
-                    // 2. 품질 지표 (★이것만 카드로 유지★)
-                    _buildSectionTitle(context, 'Quality Metrics'),
+                    _buildSectionTitle(context, '품질 지표'),
                     _buildQualityCard(
                       context,
-                      score: rating.toStringAsFixed(2),
+                      score: ratingStr,
                       votes: voteCnt,
                     ),
 
                     const SizedBox(height: 40),
 
-                    // 3. 상세 정보 (카드 제거, 투명 그리드)
-                    _buildSectionTitle(context, 'Information'),
+                    _buildSectionTitle(context, '상세 정보'),
                     _buildInfoGrid(
                       context,
                       items: [
@@ -216,18 +304,16 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
                     const SizedBox(height: 40),
 
-                    // 4. 플레이버 태그 (카드 제거)
-                    _buildSectionTitle(context, 'Flavor Tags'),
+                    _buildSectionTitle(context, '대표적인 향'),
                     _buildSectionDesc(context, '위스키와 관련하여 가장 많이 언급되는 기준입니다'),
                     _buildFlavorTags(flavors),
 
                     const SizedBox(height: 40),
 
-                    // 5. 맛 그래프 (카드 제거, 차트만 덜렁)
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        _buildSectionTitle(context, 'Taste Profile'),
+                        _buildSectionTitle(context, '맛 그래프'),
                         Padding(
                           padding: const EdgeInsets.only(right: 20, bottom: 8),
                           child: GestureDetector(
@@ -241,11 +327,10 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                         ),
                       ],
                     ),
-                    _buildTasteProfileChart(context),
+                    _buildTasteProfileChart(context, whisky.tasteProfile),
 
                     const SizedBox(height: 40),
 
-                    // 6. 테이스팅 노트 입력 (카드 제거, 입력창만 남김)
                     _buildTastingNoteHeader(context),
                     _buildTastingNoteInputBox(context),
 
@@ -260,9 +345,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 메인 정보: 카드 껍데기 벗기고 텍스트만 깔끔하게 중앙 정렬
-  Widget _buildMainWhiskyInfo(String name, String enName) {
-    final String? imageUrl = widget.whiskyData['ws_image_url'];
+  Widget _buildMainWhiskyInfo(String name, String enName, String? imageUrl) {
     return Center(
       child: Column(
         children: [
@@ -330,7 +413,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
       child: Text(
         title,
         style: const TextStyle(
-          fontSize: OakeyTheme.fontSizeM,
+          fontSize: OakeyTheme.fontSizeL,
           fontWeight: FontWeight.w800,
           color: OakeyTheme.textMain,
         ),
@@ -348,7 +431,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // ★ 유일하게 살아남은 카드 (품질 지표) ★
   Widget _buildQualityCard(
     BuildContext context, {
     required String score,
@@ -388,7 +470,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                 style: const TextStyle(
                   fontSize: 42,
                   fontWeight: FontWeight.w900,
-                  color: OakeyTheme.accentGold, // 골드/오렌지 포인트
+                  color: OakeyTheme.accentGold,
                   height: 1.0,
                 ),
               ),
@@ -418,7 +500,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 정보 그리드: 카드 제거, 깔끔한 텍스트 배치
   Widget _buildInfoGrid(
     BuildContext context, {
     required List<_InfoItem> items,
@@ -464,8 +545,13 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 플레이버 태그: 배경에 바로 칩 배치
   Widget _buildFlavorTags(List<String> tags) {
+    if (tags.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: Text("-", style: TextStyle(color: OakeyTheme.textHint)),
+      );
+    }
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Wrap(
@@ -479,9 +565,7 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: OakeyTheme.accentOrange.withOpacity(
-                    0.08,
-                  ), // 배경색이랑 어울리는 옅은 베이지
+                  color: OakeyTheme.accentOrange.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
@@ -499,10 +583,28 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 맛 차트: 카드 제거, 차트만 덩그러니 (네가 원한 대로)
-  Widget _buildTasteProfileChart(BuildContext context) {
-    final List<double> values = [0.2, 0.6, 0.4, 0.7, 0.9];
-    final List<String> labels = ['Sweet', 'Fruit', 'Spicy', 'Woody', 'Smoky'];
+  Widget _buildTasteProfileChart(
+    BuildContext context,
+    Map<String, dynamic> profile,
+  ) {
+    final List<String> labels = [
+      'FRUITY',
+      'MALTY',
+      'PEATY',
+      'SPICY',
+      'SWEET',
+      'WOODY',
+    ];
+    final List<double> values = labels.map((key) {
+      var val =
+          profile[key] ??
+          profile[key.toUpperCase()] ??
+          profile[key.toLowerCase()] ??
+          0;
+      double numVal = double.tryParse(val.toString()) ?? 0.0;
+      return (numVal / 5.0).clamp(0.0, 1.0);
+    }).toList();
+
     return Center(
       child: CustomPaint(
         size: const Size(220, 220),
@@ -518,8 +620,11 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           const Text(
-            'Tasting Note',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            '나의 테이스팅 노트',
+            style: TextStyle(
+              fontSize: OakeyTheme.fontSizeL,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           Row(
             children: [
@@ -577,16 +682,14 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 입력창: 입력 필드 자체의 박스 디자인은 유지 (안 그러면 글쓰기 힘드니까)
   Widget _buildTastingNoteInputBox(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white, // 입력창은 흰색 유지
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: OakeyTheme.borderLine),
-        // 그림자 살짝 빼서 카드 느낌 줄임
       ),
       child: TextField(
         controller: _noteController,
@@ -608,7 +711,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   }
 }
 
-// 레이더 차트 페인터랑 정보 모델 클래스는 그대로 유지
 class RadarChartPainter extends CustomPainter {
   final List<double> values;
   final List<String> labels;
@@ -681,8 +783,8 @@ class RadarChartPainter extends CustomPainter {
     for (int i = 0; i < labels.length; i++) {
       final angle = i * angleStep - math.pi / 2;
       final textOffset = Offset(
-        center.dx + (radius + 20) * math.cos(angle), // 텍스트 간격 살짝 넓힘
-        center.dy + (radius + 20) * math.sin(angle),
+        center.dx + (radius + 25) * math.cos(angle),
+        center.dy + (radius + 25) * math.sin(angle),
       );
       final textPainter = TextPainter(
         text: TextSpan(

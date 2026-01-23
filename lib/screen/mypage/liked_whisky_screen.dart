@@ -4,6 +4,7 @@ import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
 import '../../widgets/whisky_card.dart';
 import '../list/whisky_detail_screen.dart';
+import '../../models/whisky.dart';
 
 class LikedWhiskyScreen extends StatefulWidget {
   const LikedWhiskyScreen({super.key});
@@ -76,7 +77,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
                             _toggleFavoriteById(likedWhiskies[index]['ws_id']),
                         onTap: () => Get.to(
                           () => WhiskyDetailScreen(
-                            whiskyData: likedWhiskies[index],
+                            whisky: Whisky.fromDbMap(likedWhiskies[index]),
                           ),
                         ),
                       ),
@@ -97,7 +98,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
           Text(
             title,
             style: TextStyle(
-              fontSize: OakeyTheme.fontSizeL,
+              fontSize: OakeyTheme.fontSizeXL,
               fontWeight: FontWeight.w800,
               color: OakeyTheme.textMain,
             ),

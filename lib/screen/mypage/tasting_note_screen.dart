@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_detail_app_bar.dart';
 import '../list/whisky_detail_screen.dart';
+import '../../models/whisky.dart';
 
 class TastingNoteScreen extends StatefulWidget {
   const TastingNoteScreen({super.key});
@@ -174,8 +175,11 @@ class _TastingNoteScreenState extends State<TastingNoteScreen> {
                 ), // 팝업창 모서리 라운드
                 elevation: 4, // 그림자 깊이
                 onSelected: (value) {
-                  if (value == 'view')
-                    Get.to(() => WhiskyDetailScreen(whiskyData: data));
+                  if (value == 'view') {
+                    Get.to(
+                      () => WhiskyDetailScreen(whisky: Whisky.fromDbMap(data)),
+                    );
+                  }
                   if (value == 'delete') _deleteNote(index);
                 },
                 itemBuilder: (context) => [

@@ -158,6 +158,58 @@ class AuthService {
     return jsonDecode(response.body);
   }
 
+  static Future<Map<String, dynamic>?> updateProfile(String nickname) async {
+    try {
+      final response = await http.patch(
+        Uri.parse("${dotenv.env['API_BASE_URL']}/api/users/me"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer ${UserController.to.token.value}",
+        },
+        body: jsonEncode({
+          "nickname": nickname, // UserProfileUpdateRequest 구조에 맞춤
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        // 서버에서 보내준 UserProfileResponse (userId, email, nickname) 반환
+        return jsonDecode(response.body);
+      }
+      return null;
+    } catch (e) {
+      print("Nickname Update Service Error: $e");
+      return null;
+    }
+  }
+
+  static Future<bool> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
+    try {
+      // UserController에 저장된 토큰 사용
+      String token = UserController.to.token.value;
+
+      final response = await http.patch(
+        Uri.parse("${dotenv.env['API_BASE_URL']}/api/users/change-password"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token", // 핵심: JWT 토큰 전송
+        },
+        body: jsonEncode({
+          "currentPassword": currentPassword,
+          "newPassword": newPassword,
+        }),
+      );
+
+      // 서버 컨트롤러가 ResponseEntity.noContent().build()를 반환하므로 204 체크
+      return response.statusCode == 204 || response.statusCode == 200;
+    } catch (e) {
+      print("비밀번호 변경 에러: $e");
+      return false;
+    }
+  }
+
   static Future<String?> getStoredToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('accessToken');
@@ -170,7 +222,10 @@ class AuthService {
   }
 
   // 데이터 저장 로직 분리 (Clean Architecture - Data Source)
-  static Future<void> saveAuthData(Map<String, dynamic> data, String loginType) async {
+  static Future<void> saveAuthData(
+    Map<String, dynamic> data,
+    String loginType,
+  ) async {
     final prefs = await SharedPreferences.getInstance();
 
     // 1. 기본 정보 먼저 확실히 저장
@@ -178,9 +233,9 @@ class AuthService {
     await prefs.setString('refreshToken', data['refreshToken']);
     await prefs.setInt('userId', data['userId']);
     await prefs.setString('loginType', loginType);
-    if (loginType == 'email'){
+    if (loginType == 'email') {
       await prefs.setString('email', data['email'] ?? '');
-    }else{
+    } else {
       await prefs.remove('email');
     }
 
@@ -209,7 +264,8 @@ class AuthService {
       }
     } catch (e) {
       print("유저 정보 세부 로드 실패: $e");
-      if (prefs.getString('nickname') == null) await prefs.setString('nickname', '고객');
+      if (prefs.getString('nickname') == null)
+        await prefs.setString('nickname', '고객');
     }
 
     // 카카오 유저일 경우 이메일 삭제 (의도하신 대로)

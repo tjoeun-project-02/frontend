@@ -179,7 +179,9 @@ class MyPage extends StatelessWidget {
   Widget _buildLogoutButton() {
     return Center(
       child: TextButton(
-        onPressed: () {},
+        onPressed: () {
+          UserController.to.logout();
+        },
         style: TextButton.styleFrom(foregroundColor: OakeyTheme.textHint),
         child: const Text(
           "로그아웃",

@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import '../Directory/core/theme.dart';
 
+// 위스키 검색바 위젯
 class OakeySearchBar extends StatelessWidget {
-  // 검색어 입력 컨트롤러
+  // 검색어 제어 컨트롤러
   final TextEditingController controller;
-
-  // 검색어 변경 콜백
+  // 글자 입력 시 실행할 함수
   final ValueChanged<String>? onChanged;
-
+  // 엔터키 입력 시 실행할 함수
+  final ValueChanged<String>? onSubmitted;
   // 검색창 안내 문구
   final String hintText;
-
-  // 카메라 버튼 클릭 콜백
+  // 카메라 아이콘 클릭 시 함수
   final VoidCallback? onCameraTap;
 
   const OakeySearchBar({
     super.key,
     required this.controller,
     this.onChanged,
+    this.onSubmitted,
     this.hintText = '검색어를 입력하세요',
     this.onCameraTap,
   });
@@ -25,10 +26,8 @@ class OakeySearchBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      // 검색창 외부 여백
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: Container(
-        // 검색창 전체 스타일
         height: 56,
         decoration: BoxDecoration(
           color: OakeyTheme.surfacePure,
@@ -36,19 +35,17 @@ class OakeySearchBar extends StatelessWidget {
           borderRadius: BorderRadius.circular(OakeyTheme.radiusM),
         ),
         child: TextField(
-          // 검색어 입력 필드
           controller: controller,
           onChanged: onChanged,
+          onSubmitted: onSubmitted,
           textAlignVertical: TextAlignVertical.center,
+          textInputAction: TextInputAction.search,
           decoration: InputDecoration(
-            // 안내 문구 설정
             hintText: hintText,
             hintStyle: const TextStyle(
               color: OakeyTheme.textHint,
               fontSize: OakeyTheme.fontSizeM,
             ),
-
-            // 왼쪽 검색 아이콘
             prefixIcon: const Padding(
               padding: EdgeInsets.only(left: 12.0, right: 8.0),
               child: Icon(
@@ -57,8 +54,6 @@ class OakeySearchBar extends StatelessWidget {
                 size: 26,
               ),
             ),
-
-            // 오른쪽 카메라 버튼
             suffixIcon: Padding(
               padding: const EdgeInsets.all(8.0),
               child: GestureDetector(
@@ -78,8 +73,6 @@ class OakeySearchBar extends StatelessWidget {
                 ),
               ),
             ),
-
-            // 기본 입력 테두리 제거
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
