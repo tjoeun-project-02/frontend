@@ -14,6 +14,9 @@ class Whisky {
   final List<String> tags;
   final Map<String, dynamic> tasteProfile;
 
+  // 좋아요 상태 변수 추가 (값 변경 가능하도록 final 제외)
+  bool isLiked;
+
   Whisky({
     required this.wsId,
     required this.wsName,
@@ -27,9 +30,10 @@ class Whisky {
     required this.wsVoteCnt,
     required this.tags,
     required this.tasteProfile,
+    this.isLiked = false, // 기본값 false
   });
 
-  // 1. 서버 API(JSON)로부터 객체 생성
+  // 서버 JSON 데이터로 객체 생성
   factory Whisky.fromJson(Map<String, dynamic> json) {
     return Whisky(
       wsId: json['wsId'] ?? 0,
@@ -44,10 +48,11 @@ class Whisky {
       wsVoteCnt: json['wsVoteCnt'] ?? 0,
       tags: List<String>.from(json['tags'] ?? []),
       tasteProfile: Map<String, dynamic>.from(json['tasteProfile'] ?? {}),
+      isLiked: false, // 초기화 시점에는 false
     );
   }
 
-  // 2. 객체를 로컬 SQLite DB용 Map으로 변환 (List, Map은 JSON 문자열로)
+  // 로컬 DB 저장을 위한 Map 변환
   Map<String, dynamic> toDbMap() {
     return {
       'wsId': wsId,
@@ -65,7 +70,7 @@ class Whisky {
     };
   }
 
-  // 3. 로컬 SQLite DB 데이터(Map)로부터 객체 생성
+  // 로컬 DB 데이터로 객체 생성
   factory Whisky.fromDbMap(Map<String, dynamic> map) {
     return Whisky(
       wsId: map['wsId'],
@@ -80,6 +85,7 @@ class Whisky {
       wsVoteCnt: map['wsVoteCnt'],
       tags: List<String>.from(jsonDecode(map['tags'])),
       tasteProfile: Map<String, dynamic>.from(jsonDecode(map['tasteProfile'])),
+      isLiked: false,
     );
   }
 }

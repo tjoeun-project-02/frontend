@@ -2,18 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../../widgets/oakey_components.dart';
-import '../../widgets/whisky_card.dart'; // WhiskyListCard 파일 위치 확인
-import '../../widgets/search_bar.dart'; // OakeySearchBar 파일 위치 확인
+import '../../widgets/whisky_card.dart';
+import '../../widgets/search_bar.dart';
 import 'whisky_detail_screen.dart';
 import '../../controller/whisky_controller.dart';
 
 class WhiskyListScreen extends StatelessWidget {
   WhiskyListScreen({super.key});
 
-  // 1. 컨트롤러 주입
+  // 컨트롤러 주입
   final WhiskyController controller = Get.put(WhiskyController());
 
-  // 필터 옵션들 (카테고리 비교를 위해 클래스 멤버로 둠)
+  // 필터 옵션들
   final List<String> categoryOptions = [
     'Single Malt',
     'Blended',
@@ -44,7 +44,7 @@ class WhiskyListScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 2. 검색바 영역
+            // 검색바 영역
             OakeySearchBar(
               controller: controller.searchController,
               onSubmitted: (_) => controller.loadData(),
@@ -53,10 +53,10 @@ class WhiskyListScreen extends StatelessWidget {
               },
             ),
 
-            // 3. 선택된 필터 표시 영역 (Obx로 실시간 변화 감지)
+            // 선택된 필터 표시 영역
             Obx(() => _buildFixedFilterArea(context)),
 
-            // 4. 위스키 카드 리스트 영역
+            // 위스키 카드 리스트 영역
             Expanded(
               child: Obx(() {
                 // 로딩 중이고 데이터가 없으면 스피너 표시
@@ -81,26 +81,32 @@ class WhiskyListScreen extends StatelessWidget {
                     itemCount: controller.whiskies.length,
                     itemBuilder: (context, index) {
                       final item = controller.whiskies[index];
-                      return WhiskyListCard(
-                        // 모델 데이터를 카드 위젯 형식에 맞춰 전달
-                        whisky: {
-                          'ws_id': item.wsId,
-                          'ws_distillery': item.wsDistillery,
-                          'ws_name': item.wsNameKo,
-                          'ws_name_en': item.wsName,
-                          'ws_category': item.wsCategory,
-                          'ws_rating': item.wsRating,
-                          'is_liked': false, // 추후 실제 찜 데이터와 연동 필요
-                          'ws_image_url': item.wsImage,
-                          'flavor_tags': item.tags.take(3).toList(),
-                        },
-                        highlightFilters: controller.selectedFilters,
-                        onFavoriteTap: () {
-                          // TODO: 찜하기 기능 연결
-                        },
-                        onTap: () =>
-                            Get.to(() => WhiskyDetailScreen(whisky: item)),
-                      );
+
+                      // Obx로 감싸서 좋아요 상태 실시간 반영
+                      return Obx(() {
+                        // 컨트롤러의 찜 목록에 이 위스키 ID가 있는지 확인
+                        final isLiked = controller.isLiked(item.wsId);
+
+                        return WhiskyListCard(
+                          // 모델 데이터를 카드 위젯 Map 형식으로 변환
+                          whisky: {
+                            'ws_id': item.wsId,
+                            'ws_distillery': item.wsDistillery,
+                            'ws_name': item.wsNameKo,
+                            'ws_name_en': item.wsName,
+                            'ws_category': item.wsCategory,
+                            'ws_rating': item.wsRating,
+                            'is_liked': isLiked,
+                            'ws_image_url': item.wsImage,
+                            'flavor_tags': item.tags.take(3).toList(),
+                          },
+                          highlightFilters: controller.selectedFilters,
+                          // 부모(컨트롤러)의 상태를 카드에 전달
+                          isFavorite: isLiked,
+                          onTap: () =>
+                              Get.to(() => WhiskyDetailScreen(whisky: item)),
+                        );
+                      });
                     },
                   ),
                 );
@@ -136,19 +142,14 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
-  // [수정됨] 필터 버튼과 선택된 칩 영역
+  // 필터 버튼과 선택된 칩 영역
   Widget _buildFixedFilterArea(BuildContext context) {
-    // 선택된 필터가 없으면 칩 영역을 그리지 않고 필터 버튼만 보여줘도 되지만,
-    // 여기서는 레이아웃 유지를 위해 빈 공간 처리를 할 수 있음.
-    // 하지만 필터 버튼은 항상 보여야 하므로 Row 구조 유지.
-
-    // [핵심 로직] 필터 정렬: 카테고리가 있으면 맨 앞으로 보냄
     final sortedFilters = controller.selectedFilters.toList()
       ..sort((a, b) {
         bool isACat = categoryOptions.contains(a);
         bool isBCat = categoryOptions.contains(b);
-        if (isACat && !isBCat) return -1; // a가 카테고리면 앞으로
-        if (!isACat && isBCat) return 1; // b가 카테고리면 앞으로
+        if (isACat && !isBCat) return -1;
+        if (!isACat && isBCat) return 1;
         return 0;
       });
 
@@ -163,7 +164,6 @@ class WhiskyListScreen extends StatelessWidget {
               scrollDirection: Axis.horizontal,
               child: Row(
                 children: sortedFilters.map((filter) {
-                  // 현재 필터가 카테고리인지 확인
                   final isCategory = categoryOptions.contains(filter);
                   return _buildSelectedChip(filter, isCategory);
                 }).toList(),
@@ -230,13 +230,12 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
-  // [수정됨] 선택된 필터 칩 (카테고리 강조 스타일 적용)
+  // 선택된 필터 칩
   Widget _buildSelectedChip(String label, bool isCategory) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        // 카테고리면 주황색, 아니면 연한 회색
         color: isCategory
             ? OakeyTheme.accentOrange.withOpacity(0.1)
             : OakeyTheme.surfaceMuted,
@@ -247,7 +246,6 @@ class WhiskyListScreen extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              // 카테고리면 흰색, 아니면 서브 텍스트 색상
               color: isCategory ? OakeyTheme.primaryDeep : OakeyTheme.textSub,
               fontWeight: FontWeight.w800,
               fontSize: 13,
