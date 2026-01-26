@@ -11,26 +11,12 @@ class SurveyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final SurveyController surveyCtrl = Get.find<SurveyController>();
+    final SurveyController surveyCtrl = Get.put(SurveyController());
 
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
       body: Column(
         children: [
-          // 상단 진행바 (인트로와 결과 화면 제외)
-          Obx(
-            () =>
-                (surveyCtrl.surveyStep.value > 0 &&
-                    surveyCtrl.surveyStep.value < 3)
-                ? LinearProgressIndicator(
-                    value: surveyCtrl.surveyStep.value / 2,
-                    backgroundColor: OakeyTheme.borderLine,
-                    color: OakeyTheme.primaryDeep,
-                    minHeight: 4,
-                  )
-                : const SizedBox.shrink(),
-          ),
-
           Expanded(
             child: Obx(() {
               switch (surveyCtrl.surveyStep.value) {
@@ -38,8 +24,6 @@ class SurveyScreen extends StatelessWidget {
                   return _buildIntroStep(context, surveyCtrl);
                 case 1:
                   return _buildStep1(surveyCtrl);
-                case 2:
-                  return _buildStep2(surveyCtrl);
                 default:
                   return _buildResultLoading();
               }
@@ -129,124 +113,70 @@ class SurveyScreen extends StatelessWidget {
     );
   }
 
-  // STEP 1: 맛 선택 화면
   Widget _buildStep1(SurveyController surveyCtrl) {
-    final tastes = ['달콤한', '스모키', '상큼한', '나무향', '스파이시', '고소한', '초콜릿', '견과류'];
+    return Obx(() {
+      final question = surveyCtrl.questions[surveyCtrl.currentQuestionIndex.value];
+      final progress = (surveyCtrl.currentQuestionIndex.value + 1) / surveyCtrl.questions.length;
 
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Column(
         children: [
-          Text(
-            "STEP 01",
-            style: OakeyTheme.textBodyS.copyWith(
-              color: OakeyTheme.accentOrange,
-              fontWeight: FontWeight.bold,
-            ),
+          // 상단에 질문별 진행바 추가
+          LinearProgressIndicator(
+            value: progress,
+            backgroundColor: OakeyTheme.borderLine,
+            color: OakeyTheme.accentOrange,
+            minHeight: 4,
           ),
-          OakeyTheme.boxV_S,
-          Obx(
-            () => Text(
-              "${UserController.to.nickname.value}님이 선호하는\n위스키의 '맛'을 골라주세요.",
-              style: OakeyTheme.textTitleL,
-            ),
-          ),
-          const SizedBox(height: 25),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(30.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "QUESTION 0${surveyCtrl.currentQuestionIndex.value + 1}",
+                    style: OakeyTheme.textBodyS.copyWith(color: OakeyTheme.accentOrange, fontWeight: FontWeight.bold),
+                  ),
+                  OakeyTheme.boxV_S,
+                  Text(
+                    question['question'],
+                    style: OakeyTheme.textTitleL.copyWith(height: 1.3),
+                  ),
+                  const SizedBox(height: 40),
 
-          // 맛 선택 태그 영역
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: tastes
-                .map(
-                  (taste) => Obx(() {
-                    final isSelected = surveyCtrl.selectedTastes.contains(
-                      taste,
-                    );
-                    return OakeyTag(
-                      label: taste,
-                      isSelected: isSelected,
-                      onTap: () => isSelected
-                          ? surveyCtrl.selectedTastes.remove(taste)
-                          : surveyCtrl.selectedTastes.add(taste),
-                    );
-                  }),
-                )
-                .toList(),
-          ),
+                  // 답변 옵션 버튼들
+                  ... (question['options'] as List).map((opt) => Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: OakeyButton(
+                      text: opt['text'],
+                      type: OakeyButtonType.outline,
+                      size: OakeyButtonSize.large,
+                      onPressed: () => surveyCtrl.selectOption(opt['scores']),
+                    ),
+                  )).toList(),
 
-          const Spacer(),
+                  const Spacer(),
 
-          // 하단 버튼 영역
-          Row(
-            children: [
-              Expanded(
-                child: OakeyButton(
-                  text: "처음화면",
-                  type: OakeyButtonType.outline, // 아웃라인 버튼 사용
-                  onPressed: () => surveyCtrl.prevStep(),
-                ),
+                  // 하단 컨트롤 버튼
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => surveyCtrl.prevQuestion(),
+                        icon: const Icon(Icons.arrow_back_ios),
+                        color: OakeyTheme.textHint,
+                      ),
+                      const Text("이전 질문", style: TextStyle(color: OakeyTheme.textHint)),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 15),
-              Expanded(
-                flex: 2,
-                child: OakeyButton(
-                  text: "다음 단계로",
-                  type: OakeyButtonType.primary,
-                  onPressed: () => surveyCtrl.nextStep(),
-                ),
-              ),
-            ],
+            ),
           ),
         ],
-      ),
-    );
+      );
+    });
   }
 
-  // STEP 2: 가격/향 선택 화면
-  Widget _buildStep2(SurveyController surveyCtrl) {
-    return Padding(
-      padding: const EdgeInsets.all(30.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "STEP 02",
-            style: OakeyTheme.textBodyS.copyWith(
-              color: OakeyTheme.accentOrange,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          OakeyTheme.boxV_S,
-          Text("선호하는 가격대나\n추가적인 정보를 골라주세요.", style: OakeyTheme.textTitleL),
-
-          const Spacer(),
-
-          Row(
-            children: [
-              Expanded(
-                child: OakeyButton(
-                  text: "이전",
-                  type: OakeyButtonType.outline,
-                  onPressed: () => surveyCtrl.prevStep(),
-                ),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                flex: 2,
-                child: OakeyButton(
-                  text: "결과 보기",
-                  type: OakeyButtonType.primary,
-                  onPressed: () => surveyCtrl.nextStep(),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 
   // 로딩 화면
   Widget _buildResultLoading() {

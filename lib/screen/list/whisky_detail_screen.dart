@@ -517,26 +517,19 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   }
 
   // 레이더 차트 빌더
-  Widget _buildTasteProfileChart(
-    BuildContext context,
-    Map<String, dynamic> profile,
-  ) {
-    final List<String> labels = [
-      'FRUITY',
-      'MALTY',
-      'PEATY',
-      'SPICY',
-      'SWEET',
-      'WOODY',
-    ];
-    final List<double> values = labels.map((key) {
-      var val =
-          profile[key] ??
-          profile[key.toUpperCase()] ??
-          profile[key.toLowerCase()] ??
-          0;
+  Widget _buildTasteProfileChart(BuildContext context, Map<String, dynamic> profile) {
+    final List<String> labels = ['FRUITY', 'MALTY', 'PEATY', 'SPICY', 'SWEET', 'WOODY'];
+
+    final List<double> values = labels.map((label) {
+      // 1. 라벨을 소문자로 변환 (FRUITY -> fruity)
+      final String key = label.toLowerCase();
+
+      // 2. Map에서 값 추출
+      var val = profile[key] ?? profile[label] ?? 0;
+
       double numVal = double.tryParse(val.toString()) ?? 0.0;
-      return (numVal / 5.0).clamp(0.0, 1.0);
+      // 3. 10점 만점 기준이면 10.0으로 나누기
+      return (numVal / 10.0).clamp(0.0, 1.0);
     }).toList();
 
     return Center(
@@ -644,27 +637,32 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
 // 레이더 차트 페인터
 class RadarChartPainter extends CustomPainter {
-  final List<double> values;
+  final List<double> values; // 0.0 ~ 1.0 사이로 정규화된 값
   final List<String> labels;
+
   RadarChartPainter({required this.values, required this.labels});
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2 * 0.7;
+    // 전체 크기의 80%를 반지름으로 사용 (텍스트 여백 확보)
+    final double maxRadius = size.width / 2 * 0.8;
     final angleStep = (2 * math.pi) / values.length;
+
+    // --- 1. 배경 가이드라인 (동심원/거미줄) ---
     final guidePaint = Paint()
-      ..color = OakeyTheme.borderLine
+      ..color = OakeyTheme.borderLine.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    for (int i = 1; i <= 4; i++) {
-      final currentRadius = radius * (i / 4);
+    // 5개의 눈금선 생성 (각 선은 2, 4, 6, 8, 10점을 의미)
+    for (int i = 1; i <= 5; i++) {
+      final tickRadius = maxRadius * (i / 5);
       final path = Path();
-      for (int j = 0; j < values.length; j++) {
+      for (int j = 0; j < labels.length; j++) {
         final angle = j * angleStep - math.pi / 2;
-        final x = center.dx + currentRadius * math.cos(angle);
-        final y = center.dy + currentRadius * math.sin(angle);
+        final x = center.dx + tickRadius * math.cos(angle);
+        final y = center.dy + tickRadius * math.sin(angle);
         if (j == 0)
           path.moveTo(x, y);
         else
@@ -674,61 +672,93 @@ class RadarChartPainter extends CustomPainter {
       canvas.drawPath(path, guidePaint);
     }
 
+    // --- 2. 중심에서 뻗어나가는 축 라인 ---
     for (int j = 0; j < values.length; j++) {
       final angle = j * angleStep - math.pi / 2;
       canvas.drawLine(
         center,
         Offset(
-          center.dx + radius * math.cos(angle),
-          center.dy + radius * math.sin(angle),
+          center.dx + maxRadius * math.cos(angle),
+          center.dy + maxRadius * math.sin(angle),
         ),
         guidePaint,
       );
     }
 
-    final dataPath = Path();
-    for (int i = 0; i < values.length; i++) {
-      final angle = i * angleStep - math.pi / 2;
-      final x = center.dx + radius * values[i] * math.cos(angle);
-      final y = center.dy + radius * values[i] * math.sin(angle);
-      if (i == 0)
-        dataPath.moveTo(x, y);
-      else
-        dataPath.lineTo(x, y);
-    }
-    dataPath.close();
+    // --- 3. 실제 데이터 영역 (Data Path) ---
+    if (values.isNotEmpty) {
+      final dataPath = Path();
+      for (int i = 0; i < values.length; i++) {
+        final angle = i * angleStep - math.pi / 2;
+        // values[i]가 1.0일 때 정확히 maxRadius(10점 라인)에 닿음
+        final x = center.dx + maxRadius * values[i] * math.cos(angle);
+        final y = center.dy + maxRadius * values[i] * math.sin(angle);
 
-    canvas.drawPath(
-      dataPath,
-      Paint()
-        ..color = OakeyTheme.accentOrange.withOpacity(0.3)
-        ..style = PaintingStyle.fill,
-    );
-    canvas.drawPath(
-      dataPath,
-      Paint()
+        if (i == 0)
+          dataPath.moveTo(x, y);
+        else
+          dataPath.lineTo(x, y);
+      }
+      dataPath.close();
+
+      // 내부 채우기
+      canvas.drawPath(
+        dataPath,
+        Paint()
+          ..color = OakeyTheme.accentOrange.withOpacity(0.3)
+          ..style = PaintingStyle.fill,
+      );
+
+      // 외곽 테두리
+      canvas.drawPath(
+        dataPath,
+        Paint()
+          ..color = OakeyTheme.accentOrange
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.5, // 선을 조금 더 두껍게 하여 가시성 확보
+      );
+
+      // --- 4. 데이터 포인트 (꼭짓점 점 찍기) ---
+      final pointPaint = Paint()
         ..color = OakeyTheme.accentOrange
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2.0,
-    );
+        ..style = PaintingStyle.fill;
 
+      final whiteDotPaint = Paint()
+        ..color = Colors.white
+        ..style = PaintingStyle.fill;
+
+      for (int i = 0; i < values.length; i++) {
+        final angle = i * angleStep - math.pi / 2;
+        final x = center.dx + maxRadius * values[i] * math.cos(angle);
+        final y = center.dy + maxRadius * values[i] * math.sin(angle);
+
+        canvas.drawCircle(Offset(x, y), 4.5, pointPaint);
+        canvas.drawCircle(Offset(x, y), 2.5, whiteDotPaint); // 도넛 형태 포인트
+      }
+    }
+
+    // --- 5. 라벨 텍스트 그리기 ---
     for (int i = 0; i < labels.length; i++) {
       final angle = i * angleStep - math.pi / 2;
+      // 텍스트 위치를 반지름보다 조금 더 바깥으로 배치
       final textOffset = Offset(
-        center.dx + (radius + 25) * math.cos(angle),
-        center.dy + (radius + 25) * math.sin(angle),
+        center.dx + (maxRadius + 28) * math.cos(angle),
+        center.dy + (maxRadius + 28) * math.sin(angle),
       );
+
       final textPainter = TextPainter(
         text: TextSpan(
           text: labels[i],
           style: const TextStyle(
             color: OakeyTheme.textSub,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.2,
           ),
         ),
         textDirection: TextDirection.ltr,
       )..layout();
+
       textPainter.paint(
         canvas,
         Offset(
@@ -740,7 +770,9 @@ class RadarChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRepaint(covariant RadarChartPainter oldDelegate) {
+    return oldDelegate.values != values;
+  }
 }
 
 class _InfoItem {

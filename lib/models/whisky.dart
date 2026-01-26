@@ -36,18 +36,18 @@ class Whisky {
   // 서버 JSON 데이터로 객체 생성
   factory Whisky.fromJson(Map<String, dynamic> json) {
     return Whisky(
-      wsId: json['wsId'] ?? 0,
-      wsName: json['wsName'] ?? '',
-      wsNameKo: json['wsNameKo'] ?? '',
-      wsCategory: json['wsCategory'] ?? '',
-      wsDistillery: json['wsDistillery'] ?? '',
-      wsImage: json['wsImage'],
-      wsAbv: (json['wsAbv'] as num?)?.toDouble() ?? 0.0,
-      wsAge: json['wsAge'] ?? 0,
-      wsRating: (json['wsRating'] as num?)?.toDouble() ?? 0.0,
-      wsVoteCnt: json['wsVoteCnt'] ?? 0,
+      wsId: json['wsId'] ?? json['ws_id'] ?? 0,
+      wsName: json['wsName'] ?? json['ws_name'] ?? '',
+      wsNameKo: json['wsNameKo'] ?? json['ws_name_ko'] ?? '',
+      wsCategory: json['wsCategory'] ?? json['ws_category'] ?? '',
+      wsDistillery: json['wsDistillery'] ?? json['ws_distillery'] ?? '',
+      wsImage: json['wsImage'] ?? json['ws_image'],
+      wsAbv: (json['wsAbv'] ?? json['ws_abv'] as num?)?.toDouble() ?? 0.0,
+      wsAge: json['wsAge'] ?? json['ws_age'] ?? 0,
+      wsRating: (json['wsRating'] ?? json['ws_rating'] as num?)?.toDouble() ?? 0.0,
+      wsVoteCnt: json['wsVoteCnt'] ?? json['ws_vote_cnt'] ?? 0,
       tags: List<String>.from(json['tags'] ?? []),
-      tasteProfile: Map<String, dynamic>.from(json['tasteProfile'] ?? {}),
+      tasteProfile: Map<String, dynamic>.from(json['tasteProfile'] ?? json['taste_profile'] ?? {}),
       isLiked: false, // 초기화 시점에는 false
     );
   }
