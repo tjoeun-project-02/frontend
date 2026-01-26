@@ -109,7 +109,12 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                   // 위스키 이미지 영역
                   Container(
                     width: 90,
+                    height: 100,
                     alignment: Alignment.center,
+
+                    // ★ 1. 위아래 여백 추가 (이미지가 너무 꽉 차는 것 방지)
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+
                     decoration: OakeyTheme.decoTag.copyWith(
                       borderRadius: OakeyTheme.radiusS,
                     ),
@@ -120,7 +125,10 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                             borderRadius: OakeyTheme.radiusS,
                             child: Image.network(
                               widget.whisky['ws_image_url'],
-                              fit: BoxFit.cover,
+
+                              // ★ 2. 중요: 이미지가 잘리지 않고 비율 유지하며 쏙 들어가게 변경
+                              fit: BoxFit.contain,
+
                               errorBuilder: (ctx, err, st) => const Icon(
                                 Icons.liquor,
                                 color: OakeyTheme.primarySoft,

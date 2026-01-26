@@ -1,110 +1,197 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/controller/user_controller.dart';
-import 'package:frontend/screen/main/main_screen.dart';
-import 'package:frontend/screen/recommend/survey_screen.dart';
 import 'package:get/get.dart';
-
 import '../../Directory/core/theme.dart';
+import '../../widgets/components.dart';
 import '../../controller/home_controller.dart';
 import '../../controller/survey_controller.dart';
+import '../../controller/user_controller.dart';
+import '../../screen/main/main_screen.dart';
 import '../../models/whisky.dart';
 import '../list/whisky_detail_screen.dart';
+
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // 서버에서 받은 추천 리스트 (최대 3개 가정)
     final List<dynamic> results = Get.arguments ?? [];
-    final PageController pageController = PageController(viewportFraction: 0.9);
+    final PageController pageController = PageController(
+      viewportFraction: 0.85,
+    );
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F6F2), // 시안의 부드러운 배경색
+      backgroundColor: OakeyTheme.backgroundMain,
       appBar: AppBar(
-        title: const Text("추천 결과", style: TextStyle(color: Colors.black)),
+        title: const Text("추천 결과", style: OakeyTheme.textTitleM),
+        centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.home, color: Colors.black),
-          onPressed: () {
-            // 1. 결과나 설문 데이터를 들고 있는 컨트롤러 삭제 (상태 초기화)
-            Get.delete<SurveyController>();
-            // Get.delete<RecommendController>(); // 추천 컨트롤러가 따로 있다면 이것도 삭제
-
-            // 2. 화면 이동
-            Get.off(() => MainScreen());
-          },
+          icon: const Icon(Icons.home_rounded, color: OakeyTheme.textMain),
+          onPressed: _goHome,
         ),
       ),
-      body: Column(
-        children: [
-          const SizedBox(height: 10),
-          Text("${UserController.to.nickname.value}님을 위한 위스키를 찾았습니다!", style: OakeyTheme.textTitleL),
-          const SizedBox(height: 20),
+      body: SafeArea(
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
 
-          // 1. 가로 슬라이드 영역
-          Expanded(
-            child: PageView.builder(
-              controller: pageController,
-              itemCount: results.length,
-              itemBuilder: (context, index) {
-                final whisky = results[index];
-                return _buildWhiskyCard(whisky);
-              },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  Text(
+                    "당신을 위한\n특별한 위스키를 찾았어요!",
+                    style: OakeyTheme.textTitleL.copyWith(height: 1.3),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "${UserController.to.nickname.value}님의 취향을 완벽하게 저격할\n베스트 매치입니다.",
+                    style: OakeyTheme.textBodyM.copyWith(
+                      color: OakeyTheme.textHint,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // 2. 테스트 다시하기 버튼
-          TextButton(
-            onPressed: () {
-              // 1. 결과나 설문 데이터를 들고 있는 컨트롤러 삭제 (상태 초기화)
-              Get.delete<SurveyController>();
-              // Get.delete<RecommendController>(); // 추천 컨트롤러가 따로 있다면 이것도 삭제
-              Get.find<HomeController>().currentIndex.value = 2;
-              // 2. 화면 이동
-              Get.offAll(() => MainScreen());
-            },
-            child: const Text(
-                "테스트 다시 하기",
-                style: TextStyle(decoration: TextDecoration.underline, color: Colors.grey)
+            const SizedBox(height: 30),
+
+            Expanded(
+              child: results.isEmpty
+                  ? _buildEmptyState()
+                  : PageView.builder(
+                      controller: pageController,
+                      itemCount: results.length,
+                      itemBuilder: (context, index) {
+                        final whisky = results[index];
+                        return AnimatedBuilder(
+                          animation: pageController,
+                          builder: (context, child) {
+                            return Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 10,
+                              ),
+                              child: _buildWhiskyCard(whisky),
+                            );
+                          },
+                        );
+                      },
+                    ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 20),
+
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 30),
+              child: TextButton.icon(
+                onPressed: _retryTest,
+                icon: const Icon(
+                  Icons.refresh_rounded,
+                  size: 18,
+                  color: OakeyTheme.textSub,
+                ),
+                label: Text(
+                  "테스트 다시 하기",
+                  style: OakeyTheme.textBodyM.copyWith(
+                    color: OakeyTheme.textSub,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+                style: TextButton.styleFrom(
+                  overlayColor: OakeyTheme.textHint.withOpacity(0.1),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // 추천 카드 위젯
+  Widget _buildEmptyState() {
+    return Center(
+      child: Text(
+        "추천 결과를 불러올 수 없습니다.\n다시 시도해주세요.",
+        textAlign: TextAlign.center,
+        style: OakeyTheme.textBodyM.copyWith(color: OakeyTheme.textHint),
+      ),
+    );
+  }
+
   Widget _buildWhiskyCard(dynamic whiskyData) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-      ),
+      decoration: OakeyTheme.decoCard,
+      padding: const EdgeInsets.all(24),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            child: Image.network(
-              whiskyData['wsImage'] ?? '',
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.liquor, size: 80),
+            flex: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                color: OakeyTheme.surfaceMuted.withOpacity(0.3),
+                borderRadius: OakeyTheme.radiusL,
+              ),
+              child:
+                  whiskyData['wsImage'] != null &&
+                      whiskyData['wsImage'].toString().isNotEmpty
+                  ? Image.network(
+                      whiskyData['wsImage'],
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, err, st) => const Icon(
+                        Icons.liquor_rounded,
+                        size: 80,
+                        color: OakeyTheme.primarySoft,
+                      ),
+                    )
+                  : const Icon(
+                      Icons.liquor_rounded,
+                      size: 80,
+                      color: OakeyTheme.primarySoft,
+                    ),
             ),
           ),
-          const SizedBox(height: 15),
-          Text(whiskyData['wsNameKo'] ?? '이름 없음', style: OakeyTheme.textTitleM),
-          Text(whiskyData['wsNameEn'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 12)),
 
-          const SizedBox(height: 15),
-          _buildReasonSection(whiskyData),
+          const SizedBox(height: 24),
+
+          Column(
+            children: [
+              Text(
+                whiskyData['wsNameKo'] ?? '이름 없음',
+                style: OakeyTheme.textTitleM.copyWith(fontSize: 20),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                whiskyData['wsNameEn'] ?? '',
+                style: OakeyTheme.textBodyS.copyWith(
+                  color: OakeyTheme.textHint,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
 
           const SizedBox(height: 20),
-          // 카드 내부에 개별 버튼 배치 (results[0] 고정 문제 해결!)
-          SizedBox(
-            width: double.infinity,
-            child: _buildDetailButton(whiskyData),
+
+          Expanded(flex: 3, child: _buildReasonSection(whiskyData)),
+
+          const SizedBox(height: 20),
+
+          OakeyButton(
+            text: "상세 정보 보러가기",
+            type: OakeyButtonType.primary,
+            size: OakeyButtonSize.large,
+            onPressed: () => _goToDetail(whiskyData),
           ),
         ],
       ),
@@ -112,75 +199,127 @@ class ResultScreen extends StatelessWidget {
   }
 
   Widget _buildReasonSection(dynamic whisky) {
+    final List<String> tags = List<String>.from(whisky['tags'] ?? []);
+    // ★ 에러 방지: 숫자가 문자열로 와도 처리되도록 수정
+    final int matchPercent =
+        int.tryParse(whisky['matchPercent'].toString()) ?? 95;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F3F0),
-        borderRadius: BorderRadius.circular(20),
+        color: OakeyTheme.backgroundMain,
+        borderRadius: OakeyTheme.radiusM,
+        border: Border.all(color: OakeyTheme.borderLine.withOpacity(0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("이런 점이 딱 맞아요!", style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          // 태그 (서버에서 받은 tags 활용)
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                "이런 점이 딱 맞아요!",
+                style: OakeyTheme.textBodyS.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: OakeyTheme.primaryDeep,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: OakeyTheme.accentOrange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  "일치도 $matchPercent%",
+                  style: OakeyTheme.textBodyS.copyWith(
+                    fontSize: 11,
+                    color: OakeyTheme.accentOrange,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
           Wrap(
             spacing: 8,
-            children: (whisky['tags'] as List? ?? ["#달콤한_꿀", "#부드러운"]).map((tag) =>
-                Chip(label: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.brown)), backgroundColor: Colors.white)).toList(),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            "취향 일치도 ${whisky['matchPercent']}%",
-            style: const TextStyle(fontSize: 13, color: Colors.black54),
+            runSpacing: 8,
+            children: tags.isEmpty
+                ? [const Text("-")]
+                : tags.take(4).map((tag) => _buildTagChip(tag)).toList(),
           ),
         ],
       ),
     );
   }
 
-  // 상세 페이지 이동 버튼
-  Widget _buildDetailButton(dynamic whiskyData) {
-    return ElevatedButton(
-      onPressed: () {
-        try {
-          // 설문조사 결과 데이터를 일반 위스키 데이터로 변환
-          final Map<String, dynamic> normalizedData = {
-            'wsId': whiskyData['wsId'] ?? 0,
-            'wsName': whiskyData['wsNameEn'] ?? whiskyData['wsName'] ?? '',
-            'wsNameKo': whiskyData['wsNameKo'] ?? '',
-            'wsCategory': whiskyData['wsCategory'] ?? '',
-            'wsDistillery': whiskyData['distillery'] ?? '정보 없음',
-            'wsImage': whiskyData['wsImage'],
-            'wsAbv': (whiskyData['wsAbv'] as num?)?.toDouble() ?? 0.0,
-            'wsAge': whiskyData['wsAge'] ?? 0,
-            'wsRating': (whiskyData['wsRating'] as num?)?.toDouble() ?? 0.0,
-            'wsVoteCnt': whiskyData['votes'] ?? 0,
-            'tags': List<String>.from(whiskyData['tags'] ?? []),
-
-            // 핵심: tasteProfile이 null이거나 Map이 아닐 경우 처리
-            'tasteProfile': whiskyData['tasteProfile'] is Map
-                ? whiskyData['tasteProfile']
-                : {},
-          };
-
-          final whiskyObject = Whisky.fromJson(normalizedData);
-
-          // 2. 객체를 직접 전달하며 이동
-          Get.to(() => WhiskyDetailScreen(whisky: whiskyObject));
-        } catch (e) {
-          print("객체 변환 에러 발생: $e");
-          print("원본 서버 데이터 구조: $whiskyData");
-        }
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4A3A33),
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+  Widget _buildTagChip(String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: OakeyTheme.surfacePure,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: OakeyTheme.borderLine),
       ),
-      child: const Text("상세 정보 보러가기", style: TextStyle(color: Colors.white)),
+      child: Text(
+        "#$label",
+        style: OakeyTheme.textBodyS.copyWith(
+          fontSize: 11,
+          color: OakeyTheme.textSub,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
+  }
+
+  void _goHome() {
+    Get.delete<SurveyController>();
+    Get.offAll(() => MainScreen());
+  }
+
+  void _retryTest() {
+    Get.delete<SurveyController>();
+    if (Get.isRegistered<HomeController>()) {
+      Get.find<HomeController>().changeTabIndex(2);
+    }
+    Get.offAll(() => MainScreen());
+  }
+
+  // ★ [핵심 수정] 데이터 타입 에러 방지 (_goToDetail)
+  void _goToDetail(dynamic whiskyData) {
+    try {
+      final Map<String, dynamic> normalizedData = {
+        // 1. 숫자가 문자열("123")로 오더라도 int로 안전하게 변환
+        'wsId': int.tryParse(whiskyData['wsId'].toString()) ?? 0,
+
+        'wsName': whiskyData['wsNameEn'] ?? whiskyData['wsName'] ?? '',
+        'wsNameKo': whiskyData['wsNameKo'] ?? '',
+        'wsCategory': whiskyData['wsCategory'] ?? '',
+        'wsDistillery': whiskyData['distillery'] ?? '정보 없음',
+        'wsImage': whiskyData['wsImage'],
+
+        // 2. 소수점(double) 변환 안전 장치
+        'wsAbv': double.tryParse(whiskyData['wsAbv'].toString()) ?? 0.0,
+
+        // 3. 정수(int) 변환 안전 장치
+        'wsAge': int.tryParse(whiskyData['wsAge'].toString()) ?? 0,
+        'wsRating': double.tryParse(whiskyData['wsRating'].toString()) ?? 0.0,
+        'wsVoteCnt': int.tryParse(whiskyData['votes'].toString()) ?? 0,
+
+        'tags': List<String>.from(whiskyData['tags'] ?? []),
+        'tasteProfile': whiskyData['tasteProfile'] is Map
+            ? whiskyData['tasteProfile']
+            : {},
+      };
+
+      final whiskyObject = Whisky.fromJson(normalizedData);
+      Get.to(() => WhiskyDetailScreen(whisky: whiskyObject));
+    } catch (e) {
+      print("상세 이동 에러: $e");
+      OakeyTheme.showToast("오류", "상세 정보를 불러올 수 없습니다.", isError: true);
+    }
   }
 }

@@ -320,6 +320,11 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           Container(
             width: 180,
             height: 180,
+            alignment: Alignment.center,
+
+            // ★ 1. 여백 조정: 큰 이미지니까 여백을 조금 더 넉넉하게(16) 주면 예쁩니다.
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+
             decoration: BoxDecoration(
               color: OakeyTheme.surfaceMuted,
               borderRadius: OakeyTheme.radiusL,
@@ -329,17 +334,19 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                     borderRadius: OakeyTheme.radiusL,
                     child: Image.network(
                       imageUrl,
-                      fit: BoxFit.cover,
+
+                      fit: BoxFit.contain,
+
                       errorBuilder: (context, error, stackTrace) => const Icon(
                         Icons.liquor_rounded,
-                        size: 90,
+                        size: 80, // 아이콘 크기도 살짝 조정
                         color: OakeyTheme.primarySoft,
                       ),
                     ),
                   )
                 : const Icon(
                     Icons.liquor_rounded,
-                    size: 90,
+                    size: 80,
                     color: OakeyTheme.primarySoft,
                   ),
           ),
@@ -517,8 +524,18 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   }
 
   // 레이더 차트 빌더
-  Widget _buildTasteProfileChart(BuildContext context, Map<String, dynamic> profile) {
-    final List<String> labels = ['FRUITY', 'MALTY', 'PEATY', 'SPICY', 'SWEET', 'WOODY'];
+  Widget _buildTasteProfileChart(
+    BuildContext context,
+    Map<String, dynamic> profile,
+  ) {
+    final List<String> labels = [
+      'FRUITY',
+      'MALTY',
+      'PEATY',
+      'SPICY',
+      'SWEET',
+      'WOODY',
+    ];
 
     final List<double> values = labels.map((label) {
       // 1. 라벨을 소문자로 변환 (FRUITY -> fruity)

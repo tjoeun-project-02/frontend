@@ -312,25 +312,42 @@ class MainScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // 이미지
+                          // 이미지 영역
                           Expanded(
-                            child: Center(
+                            child: Container(
+                              width: double.infinity, // 가로 꽉 채움
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12.0,
+                              ),
+
+                              decoration: BoxDecoration(
+                                color: OakeyTheme.surfaceMuted.withOpacity(0.3),
+                                borderRadius: OakeyTheme.radiusM,
+                              ),
+
                               child:
                                   whisky.wsImage != null &&
                                       whisky.wsImage!.isNotEmpty
-                                  ? Image.network(
-                                      whisky.wsImage!,
-                                      errorBuilder:
-                                          (context, error, stackTrace) {
-                                            return const Icon(
-                                              Icons.liquor,
-                                              size: 48,
-                                              color: OakeyTheme.textHint,
-                                            );
-                                          },
+                                  ? ClipRRect(
+                                      borderRadius: OakeyTheme.radiusM,
+                                      child: Image.network(
+                                        whisky.wsImage!,
+
+                                        fit: BoxFit.contain,
+
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return const Icon(
+                                                Icons.liquor,
+                                                size: 40,
+                                                color: OakeyTheme.textHint,
+                                              );
+                                            },
+                                      ),
                                     )
                                   : const Icon(
                                       Icons.liquor,
-                                      size: 50,
+                                      size: 40,
                                       color: OakeyTheme.primarySoft,
                                     ),
                             ),
