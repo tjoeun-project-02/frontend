@@ -29,6 +29,7 @@ class WhiskyController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    loadData();
     ever(whiskies, (_) {
       if (whiskies.isNotEmpty) {
         generateRandomRecommendations();
