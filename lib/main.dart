@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:frontend/screen/auth/login_screen.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'controller/user_controller.dart';
 import 'screen/main/splash_screen.dart'; // 스플래시 화면
@@ -36,8 +37,7 @@ class MyApp extends StatelessWidget {
 
       scrollBehavior: OakeyTheme.globalScrollBehavior,
 
-      // theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple)),
-      home: MainScreen(), // 스플래시로 변경
+      home: LoginScreen(), // 스플래시로 변경
     );
   }
 }
