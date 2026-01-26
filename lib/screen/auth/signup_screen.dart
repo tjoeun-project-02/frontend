@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-
 import '../../services/auth/auth_common.dart';
+
+// 테마 및 컴포넌트 임포트
+import '../../Directory/core/theme.dart';
+import '../../widgets/components.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -16,123 +19,108 @@ class _SignupScreenState extends State<SignupScreen> {
   final _confirmPasswordController = TextEditingController();
 
   bool isLoading = false;
-  final Color _brandColor = const Color(0xFF4E342E); // 짙은 브라운
-  final Color _subColor = const Color(0xFF8D776D); // 인증 버튼 색상
-  final Color _backgroundColor = const Color(0xFFF9F5F2);
+
+  // 메모리 누수 방지를 위한 dispose
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _nicknameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      backgroundColor: OakeyTheme.backgroundMain,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: const BackButton(color: Colors.black),
+        leading: const BackButton(color: OakeyTheme.textMain),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '회원가입',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
+            // 헤더 텍스트 영역
+            Text('회원가입', style: OakeyTheme.textTitleXL),
+            OakeyTheme.boxV_S,
+            Text(
+              '당신의 취향을 기록하고\n딱 맞는 위스키를 추천받으세요',
+              style: OakeyTheme.textBodyM.copyWith(
+                color: OakeyTheme.textHint,
+                height: 1.5,
               ),
             ),
-            const SizedBox(height: 10),
-            const Text(
-              '당신의 취향을 기록하고\n딱 맞는 위스키를 추천받으세요',
-              style: TextStyle(fontSize: 15, color: Colors.grey, height: 1.5),
-            ),
-            const SizedBox(height: 40),
+            OakeyTheme.boxV_XL,
 
-            // EMAIL 섹션 (인증 버튼 포함)
-            const Text(
-              'EMAIL',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-            ),
-            const SizedBox(height: 8),
+            // 이메일 입력 섹션
+            _buildInputLabel('EMAIL'),
+            OakeyTheme.boxV_XS,
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: _buildTextField(
-                    hint: 'oakey@email.com',
+                  child: OakeyTextField(
+                    hintText: 'oakey@email.com',
                     controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                   ),
                 ),
-                const SizedBox(width: 10),
+                OakeyTheme.boxH_S,
                 SizedBox(
-                  width: 100, // 버튼의 가로 길이를 명확히 지정
-                  height: 55, // 텍스트 필드 높이와 맞춤
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _subColor,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      '인증 하기',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
-                    ),
+                  width: 120,
+                  height: 56, // 입력창 높이와 동일하게 맞춤
+                  child: OakeyButton(
+                    text: '인증 하기',
+                    size: OakeyButtonSize.large,
+                    type: OakeyButtonType.secondary,
+                    onPressed: () {
+                      // 이메일 인증 로직 추가 예정
+                    },
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            OakeyTheme.boxV_L,
 
-            // NICKNAME 섹션
-            _buildLabelTextField(
-              label: 'NICKNAME',
-              hint: '닉네임을 입력하세요',
+            // 닉네임 입력 섹션
+            _buildInputLabel('NICKNAME'),
+            OakeyTheme.boxV_XS,
+            OakeyTextField(
+              hintText: '닉네임을 입력하세요',
               controller: _nicknameController,
             ),
-            const SizedBox(height: 20),
+            OakeyTheme.boxV_L,
 
-            // PASSWORD 섹션
-            _buildLabelTextField(
-              label: 'PASSWORD',
-              hint: '비밀번호를 입력하세요',
-              isPassword: true,
+            // 비밀번호 입력 섹션
+            _buildInputLabel('PASSWORD'),
+            OakeyTheme.boxV_XS,
+            OakeyTextField(
+              hintText: '비밀번호를 입력하세요',
+              obscureText: true,
               controller: _passwordController,
             ),
-            const SizedBox(height: 20),
+            OakeyTheme.boxV_L,
 
-            // CONFIRM PASSWORD 섹션
-            _buildLabelTextField(
-              label: 'CONFIRM PASSWORD',
-              hint: '위 비밀번호와 동일하게 입력하세요',
-              isPassword: true,
+            // 비밀번호 확인 입력 섹션
+            _buildInputLabel('CONFIRM PASSWORD'),
+            OakeyTheme.boxV_XS,
+            OakeyTextField(
+              hintText: '위 비밀번호와 동일하게 입력하세요',
+              obscureText: true,
               controller: _confirmPasswordController,
             ),
 
             const SizedBox(height: 50),
 
             // 가입하기 버튼
-            SizedBox(
-              width: double.infinity,
-              height: 60,
-              child: ElevatedButton(
-                onPressed: isLoading ? null : _onSignupPressed, // 회원가입 완료 로직
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: _brandColor,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                ),
-                child: const Text(
-                  '회원가입',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+            OakeyButton(
+              text: '회원가입',
+              isLoading: isLoading,
+              onPressed: isLoading ? null : _onSignupPressed,
             ),
             const SizedBox(height: 30),
           ],
@@ -141,77 +129,23 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 
-  // 라벨이 포함된 텍스트 필드 빌더
-  Widget _buildLabelTextField({
-    required String label,
-    required String hint,
-    bool isPassword = false,
-    required TextEditingController? controller,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        ),
-        const SizedBox(height: 8),
-        _buildTextField(
-          hint: hint,
-          isPassword: isPassword,
-          controller: controller,
-        ),
-      ],
-    );
-  }
-
-  // 공통 텍스트 필드 스타일
-  Widget _buildTextField({
-    required String hint,
-    bool isPassword = false,
-    required TextEditingController? controller,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: isPassword,
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 20,
-            vertical: 18,
-          ),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD7CCC8)),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD7CCC8)),
-          ),
-        ),
+  // 입력창 라벨 빌더
+  Widget _buildInputLabel(String label) {
+    return Text(
+      label,
+      style: const TextStyle(
+        fontWeight: FontWeight.bold,
+        fontSize: 12,
+        color: OakeyTheme.textMain,
       ),
     );
   }
 
+  // 회원가입 버튼 클릭 로직
   Future<void> _onSignupPressed() async {
-    // 1. 기본 유효성 검사
+    // 비밀번호 일치 확인
     if (_passwordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('비밀번호가 일치하지 않습니다.')));
+      OakeyTheme.showToast('오류', '비밀번호가 일치하지 않습니다.', isError: true);
       return;
     }
 
@@ -225,15 +159,15 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('회원가입이 완료되었습니다. 로그인해 주세요.')),
-        );
-        Navigator.pop(context); // 로그인 화면으로 이동
+        OakeyTheme.showToast('가입 완료', '회원가입이 완료되었습니다. 로그인해 주세요.');
+        Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+        OakeyTheme.showToast(
+          '가입 실패',
+          e.toString().replaceAll('Exception: ', ''),
+          isError: true,
         );
       }
     } finally {

@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/controller/user_controller.dart';
 import 'package:get/get.dart';
 
+import '../../Directory/core/theme.dart';
 import '../../controller/survey_controller.dart';
+import '../../controller/user_controller.dart';
 
 class SurveyResultScreen extends StatelessWidget {
   final String whiskyName;
-  final String englishName; // 영어 이름 추가
-  final double rating;      // 별점 점수 추가
+  final String englishName;
+  final double rating;
   final String description;
 
   const SurveyResultScreen({
@@ -17,30 +18,36 @@ class SurveyResultScreen extends StatelessWidget {
     required this.rating,
     required this.description,
   });
+
   @override
   Widget build(BuildContext context) {
-
     return PopScope(
-      // 물리 뒤로가기나 제스처가 발생할 때 실행될 콜백
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) {
-            // 뒤로가기가 성공적으로 실행된 후, 컨트롤러 상태를 인트로(0)로 리셋
-            final surveyCtrl = Get.find<SurveyController>();
-            surveyCtrl.surveyStep.value = 0;
-            surveyCtrl.selectedTastes.clear();
-          }
-        },
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          final surveyCtrl = Get.find<SurveyController>();
+          surveyCtrl.surveyStep.value = 0;
+          surveyCtrl.selectedTastes.clear();
+        }
+      },
       child: Scaffold(
-        backgroundColor: const Color(0xFFF9F6F4), // 배경색
+        backgroundColor: OakeyTheme.backgroundMain,
         appBar: AppBar(
-          automaticallyImplyLeading: false, // 기본 버튼은 숨기고
+          automaticallyImplyLeading: false,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF4E342E), size: 20),
-            onPressed: () {
-              Get.back();
-            },
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              color: OakeyTheme.textMain,
+              size: 20,
+            ),
+            onPressed: () => Get.back(),
           ),
-          title: const Text('Oakey', style: TextStyle(color: Color(0xFF4E342E), fontWeight: FontWeight.bold)),
+          title: const Text(
+            'Oakey',
+            style: TextStyle(
+              color: OakeyTheme.primaryDeep,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
           backgroundColor: Colors.transparent,
           elevation: 0,
           centerTitle: true,
@@ -50,68 +57,97 @@ class SurveyResultScreen extends StatelessWidget {
           child: Column(
             children: [
               const SizedBox(height: 10),
-              Obx(() => Text(
-                "${UserController.to.nickname.value}님을 위한 위스키를 찾았습니다!",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              )),
-              const SizedBox(height: 25),
+              Obx(
+                () => Text(
+                  "${UserController.to.nickname.value}님을 위한 위스키를 찾았습니다!",
+                  style: OakeyTheme.textTitleM,
+                ),
+              ),
+              OakeyTheme.boxV_L,
 
               // 메인 결과 카드
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(25),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(40),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 20)],
+                // 테마의 카드 스타일 적용
+                decoration: OakeyTheme.decoCard.copyWith(
+                  borderRadius: OakeyTheme.radiusXL,
                 ),
                 child: Column(
                   children: [
-                    // 위스키 이미지 영역 (목업)
+                    // 위스키 이미지 영역
                     Container(
                       width: 140,
                       height: 180,
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF1EDE9),
-                        borderRadius: BorderRadius.circular(20),
+                        color: OakeyTheme.surfaceMuted,
+                        borderRadius: OakeyTheme.radiusL,
                       ),
                       child: const Center(
-                        child: Icon(Icons.liquor, size: 50, color: Colors.orangeAccent),
+                        child: Icon(
+                          Icons.liquor_rounded,
+                          size: 50,
+                          color: OakeyTheme.accentOrange,
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 25),
+                    OakeyTheme.boxV_L,
 
-                    // 위스키 한글/영어 이름
-                    Text(whiskyName, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    // 위스키 이름 정보
+                    Text(
+                      whiskyName,
+                      style: OakeyTheme.textTitleL,
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 5),
-                    Text(englishName, style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                    Text(
+                      englishName,
+                      style: OakeyTheme.textBodyS.copyWith(
+                        color: OakeyTheme.textHint,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 15),
 
                     // 별점 정보
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.star, color: Color(0xFFD4AF37), size: 24),
+                        const Icon(
+                          Icons.star_rounded,
+                          color: OakeyTheme.accentGold,
+                          size: 24,
+                        ),
                         const SizedBox(width: 8),
-                        Text(rating.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                        Text(rating.toString(), style: OakeyTheme.textTitleM),
                         const SizedBox(width: 5),
-                        const Text("(Whiskybase)", style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        Text(
+                          "(Whiskybase)",
+                          style: OakeyTheme.textBodyS.copyWith(
+                            color: OakeyTheme.textHint,
+                          ),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 25),
+                    OakeyTheme.boxV_L,
 
                     // 하단 설명 박스
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF9F6F4),
-                        borderRadius: BorderRadius.circular(25),
+                        color: OakeyTheme.backgroundMain,
+                        borderRadius: OakeyTheme.radiusL,
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text("이런 점이 딱 맞아요!", style: TextStyle(fontWeight: FontWeight.bold)),
+                          Text(
+                            "이런 점이 딱 맞아요!",
+                            style: OakeyTheme.textBodyL.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Wrap(
                             spacing: 8,
@@ -122,7 +158,13 @@ class SurveyResultScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 12),
-                          Text(description, style: const TextStyle(color: Colors.grey, height: 1.5, fontSize: 13)),
+                          Text(
+                            description,
+                            style: OakeyTheme.textBodyS.copyWith(
+                              color: OakeyTheme.textHint,
+                              height: 1.5,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -131,14 +173,22 @@ class SurveyResultScreen extends StatelessWidget {
               ),
 
               const SizedBox(height: 20),
+
+              // 다시하기 버튼
               TextButton(
                 onPressed: () => Get.back(),
-                child: const Text("테스트 다시 하기", style: TextStyle(color: Colors.grey, decoration: TextDecoration.underline)),
+                child: Text(
+                  "테스트 다시 하기",
+                  style: OakeyTheme.textBodyS.copyWith(
+                    color: OakeyTheme.textHint,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
 
               const Spacer(),
 
-              // 하단 버튼 레이아웃
+              // 하단 액션 버튼
               Row(
                 children: [
                   // 찜하기 버튼
@@ -146,22 +196,37 @@ class SurveyResultScreen extends StatelessWidget {
                     width: 65,
                     height: 65,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1EDE9),
-                      borderRadius: BorderRadius.circular(20),
+                      color: OakeyTheme.surfaceMuted,
+                      borderRadius: OakeyTheme.radiusL,
                     ),
-                    child: const Icon(Icons.favorite_border, color: Color(0xFF4E342E), size: 28),
+                    child: const Icon(
+                      Icons.favorite_border_rounded,
+                      color: OakeyTheme.primaryDeep,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(width: 15),
+
                   // 상세 정보 버튼
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () {},
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF42342E),
+                        backgroundColor: OakeyTheme.primaryDeep,
                         minimumSize: const Size(double.infinity, 65),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: OakeyTheme.radiusL,
+                        ),
+                        elevation: 0,
                       ),
-                      child: const Text("상세 정보 보러가기", style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      child: const Text(
+                        "상세 정보 보러가기",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -170,12 +235,12 @@ class SurveyResultScreen extends StatelessWidget {
             ],
           ),
         ),
-      )
+      ),
     );
   }
 }
 
-// 태그용 위젯
+// 태그 위젯
 class _Tag extends StatelessWidget {
   final String label;
   const _Tag({required this.label});
@@ -185,10 +250,17 @@ class _Tag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: const Color(0xFFEFE6DD),
+        color: OakeyTheme
+            .surfaceMuted, // 살짝 어두운 배경색으로 변경하거나 accentOrange.withOpacity 사용 가능
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Text(label, style: const TextStyle(fontSize: 12, color: Color(0xFF8D776D))),
+      child: Text(
+        label,
+        style: OakeyTheme.textBodyS.copyWith(
+          color: OakeyTheme.primarySoft,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }

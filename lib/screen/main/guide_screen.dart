@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
-import '../../widgets/oakey_detail_app_bar.dart';
+import '../../widgets/detail_app_bar.dart';
 
-// 위스키 가이드 화면을 구성하는 위젯
+// 위스키 가이드 화면 위젯
 class WhiskyGuideScreen extends StatefulWidget {
   const WhiskyGuideScreen({super.key});
 
@@ -11,12 +10,10 @@ class WhiskyGuideScreen extends StatefulWidget {
   State<WhiskyGuideScreen> createState() => _WhiskyGuideScreenState();
 }
 
-// 가이드 화면의 상태를 관리하는 클래스
 class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
-  // 현재 열려있는 카드의 인덱스를 저장
   int _expandedIndex = -1;
 
-  // 가이드 챕터 및 질문 데이터 리스트
+  // 가이드 데이터 리스트
   final List<Map<String, dynamic>> _guideData = [
     {
       "chapter": "CHAPTER 01",
@@ -183,7 +180,6 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
     },
   ];
 
-  // 화면 UI를 구성하는 빌드 메서드
   @override
   Widget build(BuildContext context) {
     int globalIndex = 0;
@@ -194,18 +190,16 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
         child: Column(
           children: [
             const OakeyDetailAppBar(),
-
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 최상단 배너 위젯 호출
                     _buildHeaderBanner(),
-                    const SizedBox(height: 20),
+                    OakeyTheme.boxV_M,
 
-                    // 데이터 리스트를 순회하며 챕터별 위젯 생성
+                    // 챕터 및 QnA 목록 생성
                     ..._guideData.map((chapterData) {
                       List<Map<String, String>> qnas = chapterData['qna'];
                       return Column(
@@ -224,7 +218,7 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
                               qna['A']!,
                             );
                           }),
-                          const SizedBox(height: 24),
+                          OakeyTheme.boxV_L,
                         ],
                       );
                     }),
@@ -239,54 +233,56 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
     );
   }
 
-  // 상단 배너 영역을 디자인하는 위젯
+  // 상단 배너 위젯
   Widget _buildHeaderBanner() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+      padding: const EdgeInsets.fromLTRB(20, 40, 20, 30),
       decoration: BoxDecoration(
         color: OakeyTheme.primaryDeep,
-        borderRadius: const BorderRadius.only(bottomRight: Radius.circular(60)),
-        boxShadow: OakeyTheme.cardShadow,
+        // 상단 배너 특유의 한쪽 둥글기 적용
+        borderRadius: const BorderRadius.only(bottomRight: Radius.circular(40)),
+        boxShadow: [
+          BoxShadow(
+            color: OakeyTheme.primaryDeep.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "GUIDE FOR BEGINNER",
-            style: TextStyle(
+            style: OakeyTheme.textBodyS.copyWith(
               color: OakeyTheme.accentGold,
               fontWeight: FontWeight.w800,
-              fontSize: OakeyTheme.fontSizeS,
               letterSpacing: 1.5,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          const SizedBox(height: 12),
+          Text(
             "“ 위스키,\n어떻게 시작해야 할까요? ”",
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: OakeyTheme.fontSizeXL,
-              fontWeight: FontWeight.w800,
+            style: OakeyTheme.textTitleXL.copyWith(
+              color: OakeyTheme.textWhite,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             "가장 기초적인 정의부터 전문가처럼\n즐기는 법까지 Oakey와 함께 알아볼까요?",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
-              fontSize: OakeyTheme.fontSizeM,
-              height: 1.3,
+            style: OakeyTheme.textBodyM.copyWith(
+              color: OakeyTheme.textWhite.withOpacity(0.8),
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 16),
         ],
       ),
     );
   }
 
-  // 각 챕터의 제목을 표시하는 헤더 위젯
+  // 챕터 헤더 위젯
   Widget _buildChapterHeader(String chapter, String title) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
@@ -295,20 +291,17 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
         children: [
           Text(
             chapter,
-            style: const TextStyle(
+            style: OakeyTheme.textBodyS.copyWith(
               color: OakeyTheme.accentOrange,
               fontWeight: FontWeight.w800,
-              fontSize: OakeyTheme.fontSizeS,
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
+            style: OakeyTheme.textTitleL.copyWith(
               color: OakeyTheme.primaryDeep,
-              fontWeight: FontWeight.w800,
-              fontSize: OakeyTheme.fontSizeL,
               letterSpacing: -0.5,
             ),
           ),
@@ -317,13 +310,12 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
     );
   }
 
-  // 질문과 답변을 보여주는 카드형 아코디언 위젯
+  // 아코디언 카드 위젯
   Widget _buildCardAccordion(int index, String question, String answer) {
     final bool isExpanded = _expandedIndex == index;
 
     return GestureDetector(
       onTap: () {
-        // 클릭 시 해당 카드만 열고 나머지는 닫는 로직
         setState(() {
           _expandedIndex = isExpanded ? -1 : index;
         });
@@ -334,16 +326,19 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
           color: OakeyTheme.surfacePure,
-          borderRadius: OakeyTheme.brCard,
+          borderRadius: OakeyTheme.radiusL,
           border: Border.all(
             color: isExpanded
                 ? OakeyTheme.primaryDeep.withOpacity(0.2)
                 : Colors.transparent,
             width: 1.0,
           ),
+          // 테마의 카드 그림자 스타일 응용
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(isExpanded ? 0.08 : 0.04),
+              color: OakeyTheme.primaryDeep.withOpacity(
+                isExpanded ? 0.08 : 0.04,
+              ),
               blurRadius: 20,
               offset: const Offset(0, 5),
             ),
@@ -351,33 +346,28 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
         ),
         child: Column(
           children: [
-            // 질문 텍스트와 화살표 아이콘을 배치
+            // 질문 영역
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
               child: Row(
                 children: [
                   Text(
                     "Q.",
-                    style: TextStyle(
+                    style: OakeyTheme.textTitleM.copyWith(
                       color: isExpanded
                           ? OakeyTheme.accentOrange
-                          : Colors.grey[400],
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
+                          : OakeyTheme.textHint,
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       question,
-                      style: TextStyle(
-                        color: isExpanded
-                            ? OakeyTheme.textMain
-                            : OakeyTheme.textMain,
+                      style: OakeyTheme.textBodyL.copyWith(
                         fontWeight: isExpanded
                             ? FontWeight.w800
                             : FontWeight.w600,
-                        fontSize: OakeyTheme.fontSizeM,
+                        color: OakeyTheme.textMain,
                         height: 1.3,
                       ),
                     ),
@@ -389,13 +379,13 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
                       Icons.keyboard_arrow_down_rounded,
                       color: isExpanded
                           ? OakeyTheme.accentOrange
-                          : Colors.grey[300],
+                          : OakeyTheme.textHint,
                     ),
                   ),
                 ],
               ),
             ),
-            // 답변 영역의 크기를 애니메이션으로 조절
+            // 답변 영역 애니메이션
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
@@ -409,6 +399,7 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
                     Container(
                       width: 2,
                       height: 20,
+                      margin: const EdgeInsets.only(top: 4),
                       decoration: BoxDecoration(
                         color: OakeyTheme.accentGold,
                         borderRadius: BorderRadius.circular(2),
@@ -419,22 +410,19 @@ class _WhiskyGuideScreenState extends State<WhiskyGuideScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "A.",
-                            style: TextStyle(
+                            style: OakeyTheme.textBodyS.copyWith(
                               color: OakeyTheme.accentGold,
                               fontWeight: FontWeight.w800,
-                              fontSize: OakeyTheme.fontSizeS,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             answer,
-                            style: const TextStyle(
-                              color: OakeyTheme.textMain,
-                              fontSize: OakeyTheme.fontSizeM,
+                            style: OakeyTheme.textBodyM.copyWith(
                               height: 1.5,
-                              fontWeight: FontWeight.w500,
+                              color: OakeyTheme.textMain,
                             ),
                           ),
                         ],

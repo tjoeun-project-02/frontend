@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../Directory/core/theme.dart';
 import '../../controller/user_controller.dart';
 import '../auth/login_screen.dart';
 import '../main/main_screen.dart';
@@ -19,10 +20,10 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _initAndNavigate() async {
-
-    // 최소 로딩 시간 보장 (2초)
+    // 최소 로딩 시간 보장
     await Future.delayed(const Duration(seconds: 2));
 
+    // 로그인 상태에 따른 화면 이동
     if (UserController.to.isLoggedIn.value) {
       Get.offAll(() => MainScreen());
     } else {
@@ -33,25 +34,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9F5F2), // 앱 테마색에 맞춤
+      backgroundColor: OakeyTheme.backgroundMain,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/img/whiskey_logo.png',
-              width: 200,
-              height: 200,
-            ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(color: Color(0xFF4E342E)),
-            const SizedBox(height: 20),
-            const Text(
+            Image.asset('assets/img/whiskey_logo.png', width: 200, height: 200),
+            OakeyTheme.boxV_L,
+            const CircularProgressIndicator(color: OakeyTheme.primaryDeep),
+            OakeyTheme.boxV_L,
+            Text(
               'Oakey',
-              style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4E342E)
+              style: OakeyTheme.textTitleXL.copyWith(
+                fontSize: 32,
+                color: OakeyTheme.primaryDeep,
               ),
             ),
           ],

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../Directory/core/theme.dart';
 import '../controller/user_controller.dart';
-import '../controller/whisky_controller.dart'; // ★ 컨트롤러 임포트 필수
+import '../controller/whisky_controller.dart';
 
 class WhiskyListCard extends StatefulWidget {
   final Map<String, dynamic> whisky;
@@ -30,12 +30,10 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
   @override
   void initState() {
     super.initState();
-    // 초기 좋아요 상태 설정
     _isLiked = widget.isFavorite ?? (widget.whisky['is_liked'] == true);
   }
 
-  // ★ [핵심] 부모(리스트 화면)의 Obx가 감지해서 값을 바꾸면
-  // 카드 내부 상태(_isLiked)도 강제로 동기화시키는 함수
+  // 부모 위젯 업데이트 시 상태 동기화
   @override
   void didUpdateWidget(covariant WhiskyListCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -48,9 +46,8 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
     }
   }
 
-  // 하트 클릭 로직
+  // 좋아요 버튼 클릭 시 동작
   Future<void> _onLikeTap() async {
-    // 1. 로그인 체크
     int currentUserId = 0;
     try {
       currentUserId = UserController.to.userId.value;
@@ -59,24 +56,14 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
     }
 
     if (currentUserId == 0) {
-      Get.snackbar(
-        "알림",
-        "로그인이 필요한 기능입니다.",
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: OakeyTheme.primaryDeep.withOpacity(0.8),
-        colorText: Colors.white,
-        margin: const EdgeInsets.all(20),
-        duration: const Duration(seconds: 2),
-      );
+      OakeyTheme.showToast("알림", "로그인이 필요한 기능입니다.", isError: true);
       return;
     }
 
-    // 2. UI 낙관적 업데이트 (누르자마자 색깔 바꿈)
     setState(() {
       _isLiked = !_isLiked;
     });
 
-    // 3. 위스키 ID 파싱 (ws_id 혹은 wsId 둘 다 대응)
     final int wsId =
         int.tryParse(
           widget.whisky['ws_id']?.toString() ??
@@ -86,8 +73,6 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
         0;
 
     if (wsId != 0) {
-      // ★ [핵심] ApiService를 직접 부르지 않고 컨트롤러를 시킴
-      // 그래야 '리스트 화면'의 Obx가 반응해서 다른 카드들의 상태도 관리함
       final controller = Get.find<WhiskyController>();
       await controller.toggleLike(wsId);
     }
@@ -95,7 +80,6 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
 
   @override
   Widget build(BuildContext context) {
-    // 데이터 추출
     final String wsCategory = (widget.whisky['ws_category'] ?? '').toString();
     final String wsNameKo = (widget.whisky['ws_name'] ?? '이름 없음').toString();
     final String wsNameEn = (widget.whisky['ws_name_en'] ?? '').toString();
@@ -106,39 +90,34 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
       widget.whisky['flavor_tags'] ?? [],
     );
 
-    final textTheme = Theme.of(context).textTheme;
-
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
-        margin: widget.margin ?? const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: OakeyTheme.surfacePure,
-          borderRadius: OakeyTheme.brCard,
-          boxShadow: OakeyTheme.cardShadow,
-        ),
+        margin:
+            widget.margin ?? const EdgeInsets.only(bottom: OakeyTheme.spacingM),
+        padding: const EdgeInsets.all(OakeyTheme.spacingM),
+
+        // 카드 스타일 테마 적용
+        decoration: OakeyTheme.decoCard,
+
         child: Stack(
           children: [
             IntrinsicHeight(
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 좌측 이미지 영역
+                  // 위스키 이미지 영역
                   Container(
                     width: 90,
                     alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: OakeyTheme.surfaceMuted,
-                      borderRadius: BorderRadius.circular(OakeyTheme.radiusS),
+                    decoration: OakeyTheme.decoTag.copyWith(
+                      borderRadius: OakeyTheme.radiusS,
                     ),
                     child:
                         widget.whisky['ws_image_url'] != null &&
                             widget.whisky['ws_image_url'].toString().isNotEmpty
                         ? ClipRRect(
-                            borderRadius: BorderRadius.circular(
-                              OakeyTheme.radiusS,
-                            ),
+                            borderRadius: OakeyTheme.radiusS,
                             child: Image.network(
                               widget.whisky['ws_image_url'],
                               fit: BoxFit.cover,
@@ -155,9 +134,9 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                             size: 40,
                           ),
                   ),
-                  const SizedBox(width: 16),
+                  OakeyTheme.boxH_M,
 
-                  // 우측 정보 영역
+                  // 위스키 정보 텍스트 영역
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -165,7 +144,7 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                       children: [
                         Text(
                           wsCategory.isEmpty ? '-' : wsCategory,
-                          style: textTheme.labelSmall?.copyWith(
+                          style: OakeyTheme.textBodyS.copyWith(
                             color: OakeyTheme.textHint,
                             fontWeight: FontWeight.w600,
                           ),
@@ -175,9 +154,8 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                           wsNameKo,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: textTheme.bodyLarge?.copyWith(
+                          style: OakeyTheme.textBodyL.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: OakeyTheme.textMain,
                           ),
                         ),
                         if (wsNameEn.isNotEmpty) ...[
@@ -185,23 +163,21 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
                             wsNameEn,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: textTheme.bodySmall?.copyWith(
-                              fontSize: OakeyTheme.fontSizeXS,
-                              color: OakeyTheme.textSub,
-                              fontWeight: FontWeight.w600,
-                            ),
+                            style: OakeyTheme.textBodyM,
                           ),
                         ],
                         const SizedBox(height: 4),
-                        _buildRatingRow(wsRating, textTheme),
+                        _buildRatingRow(wsRating),
                         const SizedBox(height: 8),
+
+                        // 플레이버 태그 목록
                         Wrap(
                           spacing: 6,
                           runSpacing: 4,
                           children: flavorTags.map((tag) {
                             final bool isHighlighted = widget.highlightFilters
                                 .contains(tag);
-                            return _buildTag(tag, isHighlighted, textTheme);
+                            return _buildTag(tag, isHighlighted);
                           }).toList(),
                         ),
                       ],
@@ -211,7 +187,7 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
               ),
             ),
 
-            // 우측 상단 찜하기 버튼
+            // 우측 상단 찜하기 아이콘
             Positioned(
               top: -2,
               right: 0,
@@ -233,41 +209,36 @@ class _WhiskyListCardState extends State<WhiskyListCard> {
     );
   }
 
-  Widget _buildRatingRow(double rating, TextTheme textTheme) {
+  // 별점 표시 행
+  Widget _buildRatingRow(double rating) {
     return Row(
       children: [
-        const Icon(
-          Icons.star,
-          color: OakeyTheme.accentGold,
-          size: OakeyTheme.fontSizeM,
-        ),
+        const Icon(Icons.star, color: OakeyTheme.accentGold, size: 16),
         const SizedBox(width: 4),
         Text(
           rating.toString(),
-          style: textTheme.labelLarge?.copyWith(
-            color: OakeyTheme.textMain,
-            fontWeight: FontWeight.w500,
-          ),
+          style: OakeyTheme.textBodyM.copyWith(fontWeight: FontWeight.w600),
         ),
       ],
     );
   }
 
-  Widget _buildTag(String label, bool isHighlighted, TextTheme textTheme) {
+  // 태그 스타일 빌더
+  Widget _buildTag(String label, bool isHighlighted) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: isHighlighted
             ? OakeyTheme.accentOrange
             : OakeyTheme.accentOrange.withOpacity(0.1),
-        borderRadius: OakeyTheme.brTag,
+        borderRadius: OakeyTheme.radiusXS,
       ),
       child: Text(
         label,
-        style: textTheme.labelSmall?.copyWith(
-          fontSize: OakeyTheme.fontSizeXS,
-          color: isHighlighted ? Colors.white : OakeyTheme.accentOrange,
+        style: TextStyle(
+          fontSize: 10,
           fontWeight: FontWeight.w600,
+          color: isHighlighted ? Colors.white : OakeyTheme.accentOrange,
         ),
       ),
     );

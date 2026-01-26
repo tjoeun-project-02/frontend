@@ -14,6 +14,7 @@ class OakeyBottomBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      // 상단 테두리 스타일
       decoration: const BoxDecoration(
         border: Border(
           top: BorderSide(color: OakeyTheme.borderLine, width: 1.0),
@@ -23,24 +24,30 @@ class OakeyBottomBar extends StatelessWidget {
         currentIndex: currentIndex,
         onTap: onTap,
 
+        // 배경 및 아이콘 색상 테마 적용
         backgroundColor: OakeyTheme.backgroundMain,
         selectedItemColor: OakeyTheme.primaryDeep,
         unselectedItemColor: OakeyTheme.textHint,
 
+        // 라벨 텍스트 스타일 테마 적용
         selectedLabelStyle: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.5,
+          color: OakeyTheme.primaryDeep,
         ),
         unselectedLabelStyle: const TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w600,
           letterSpacing: 0.5,
+          color: OakeyTheme.textHint,
         ),
 
+        // 네비게이션 바 설정
         type: BottomNavigationBarType.fixed,
         elevation: 0,
 
+        // 네비게이션 아이템 목록
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home_outlined, size: 24),

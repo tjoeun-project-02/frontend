@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
-import '../../widgets/oakey_components.dart';
+import '../../widgets/components.dart';
 import '../../widgets/whisky_card.dart';
 import '../../widgets/search_bar.dart';
 import 'whisky_detail_screen.dart';
@@ -13,7 +13,7 @@ class WhiskyListScreen extends StatelessWidget {
   // 컨트롤러 주입
   final WhiskyController controller = Get.put(WhiskyController());
 
-  // 필터 옵션들
+  // 필터 옵션 목록
   final List<String> categoryOptions = [
     'Single Malt',
     'Blended',
@@ -36,15 +36,13 @@ class WhiskyListScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
       appBar: null,
       body: SafeArea(
         child: Column(
           children: [
-            // 검색바 영역
+            // 검색바 위젯
             OakeySearchBar(
               controller: controller.searchController,
               onSubmitted: (_) => controller.loadData(),
@@ -53,13 +51,12 @@ class WhiskyListScreen extends StatelessWidget {
               },
             ),
 
-            // 선택된 필터 표시 영역
+            // 상단 필터 영역
             Obx(() => _buildFixedFilterArea(context)),
 
-            // 위스키 카드 리스트 영역
+            // 위스키 리스트 영역
             Expanded(
               child: Obx(() {
-                // 로딩 중이고 데이터가 없으면 스피너 표시
                 if (controller.isLoading.value && controller.whiskies.isEmpty) {
                   return const Center(
                     child: CircularProgressIndicator(
@@ -68,9 +65,8 @@ class WhiskyListScreen extends StatelessWidget {
                   );
                 }
 
-                // 데이터가 아예 없으면 텅 빈 화면 표시
                 if (controller.whiskies.isEmpty) {
-                  return _buildEmptyState(textTheme);
+                  return _buildEmptyState();
                 }
 
                 return RefreshIndicator(
@@ -82,13 +78,10 @@ class WhiskyListScreen extends StatelessWidget {
                     itemBuilder: (context, index) {
                       final item = controller.whiskies[index];
 
-                      // Obx로 감싸서 좋아요 상태 실시간 반영
                       return Obx(() {
-                        // 컨트롤러의 찜 목록에 이 위스키 ID가 있는지 확인
                         final isLiked = controller.isLiked(item.wsId);
 
                         return WhiskyListCard(
-                          // 모델 데이터를 카드 위젯 Map 형식으로 변환
                           whisky: {
                             'ws_id': item.wsId,
                             'ws_distillery': item.wsDistillery,
@@ -101,7 +94,6 @@ class WhiskyListScreen extends StatelessWidget {
                             'flavor_tags': item.tags.take(3).toList(),
                           },
                           highlightFilters: controller.selectedFilters,
-                          // 부모(컨트롤러)의 상태를 카드에 전달
                           isFavorite: isLiked,
                           onTap: () =>
                               Get.to(() => WhiskyDetailScreen(whisky: item)),
@@ -119,7 +111,7 @@ class WhiskyListScreen extends StatelessWidget {
   }
 
   // 검색 결과 없음 화면
-  Widget _buildEmptyState(TextTheme textTheme) {
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -132,17 +124,14 @@ class WhiskyListScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             '찾으시는 위스키가 없습니다.',
-            style: textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: OakeyTheme.textHint,
-            ),
+            style: OakeyTheme.textBodyL.copyWith(color: OakeyTheme.textHint),
           ),
         ],
       ),
     );
   }
 
-  // 필터 버튼과 선택된 칩 영역
+  // 상단 필터 영역 구성
   Widget _buildFixedFilterArea(BuildContext context) {
     final sortedFilters = controller.selectedFilters.toList()
       ..sort((a, b) {
@@ -175,7 +164,7 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
-  // 필터 모달 열기 버튼
+  // 필터 모달 트리거 버튼
   Widget _buildFilterTrigger(BuildContext context) {
     final int count = controller.selectedFilters.length;
     return GestureDetector(
@@ -197,7 +186,7 @@ class WhiskyListScreen extends StatelessWidget {
                   '필터',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: OakeyTheme.fontSizeS,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -230,7 +219,7 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
-  // 선택된 필터 칩
+  // 선택된 필터 칩 스타일
   Widget _buildSelectedChip(String label, bool isCategory) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
@@ -268,6 +257,7 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
+  // 필터 모달 표시 함수
   void _showFilterModal(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -277,7 +267,7 @@ class WhiskyListScreen extends StatelessWidget {
         height: MediaQuery.of(context).size.height * 0.8,
         decoration: BoxDecoration(
           color: OakeyTheme.surfacePure,
-          borderRadius: OakeyTheme.brPanel,
+          borderRadius: OakeyTheme.radiusTopXL, // 테마의 상단 둥글기 적용
         ),
         child: Column(
           children: [
@@ -311,23 +301,19 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
+  // 모달 내부 섹션 구성
   Widget _buildModalSection(
     BuildContext context,
     String title,
     List<String> options, {
     bool isSingleSelect = false,
   }) {
-    final textTheme = Theme.of(context).textTheme;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: OakeyTheme.primarySoft,
-          ),
+          style: OakeyTheme.textTitleM.copyWith(color: OakeyTheme.primarySoft),
         ),
         const SizedBox(height: 16),
         Obx(() {
@@ -361,7 +347,7 @@ class WhiskyListScreen extends StatelessWidget {
                     color: isSelected
                         ? OakeyTheme.primaryDeep
                         : (isDisabled ? Colors.grey[100] : Colors.white),
-                    borderRadius: BorderRadius.circular(OakeyTheme.radiusS),
+                    borderRadius: OakeyTheme.radiusXS,
                     border: Border.all(
                       color: isSelected
                           ? OakeyTheme.primaryDeep
@@ -372,7 +358,7 @@ class WhiskyListScreen extends StatelessWidget {
                   ),
                   child: Text(
                     option,
-                    style: textTheme.bodyMedium?.copyWith(
+                    style: OakeyTheme.textBodyM.copyWith(
                       fontWeight: FontWeight.w600,
                       color: isSelected
                           ? Colors.white
@@ -391,6 +377,7 @@ class WhiskyListScreen extends StatelessWidget {
     );
   }
 
+  // 모달 하단 버튼 영역
   Widget _buildModalActionButtons(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 48),

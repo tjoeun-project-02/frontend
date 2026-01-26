@@ -5,6 +5,10 @@ import '../main/main_screen.dart';
 import 'signup_screen.dart';
 import 'pwfind_screen.dart';
 
+// 테마 및 컴포넌트 임포트
+import '../../Directory/core/theme.dart';
+import '../../widgets/components.dart';
+
 class LoginScreen extends StatefulWidget {
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -16,14 +20,11 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // 디자인 가이드 색상
-  final Color _brandColor = const Color(0xFF4E342E); // 짙은 브라운
-  final Color _kakaoColor = const Color(0xFFFEE500); // 카카오 노란색
-  final Color _backgroundColor = const Color(0xFFF9F5F2); // 연한 베이지 배경
+  // 카카오 브랜드 색상 정의
+  final Color _kakaoColor = const Color(0xFFFEE500);
 
   @override
   void dispose() {
-    // 메모리 누수 방지를 위해 컨트롤러 해제
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -32,179 +33,163 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      // 테마 배경색 적용
+      backgroundColor: OakeyTheme.backgroundMain,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 30),
           child: _isLoggingIn
-              ? CircularProgressIndicator(color: _brandColor)
+              ? const CircularProgressIndicator(color: OakeyTheme.primaryDeep)
               : Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // 로고 및 타이틀
-              const Text(
-                'Oakey',
-                style: TextStyle(
-                  fontSize: 40,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF4E342E),
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // 로고 텍스트
+                    const Text(
+                      'Oakey',
+                      style: TextStyle(
+                        fontSize: 40,
+                        fontWeight: FontWeight.w900,
+                        color: OakeyTheme.primaryDeep,
+                      ),
+                    ),
+                    OakeyTheme.boxV_S,
+
+                    // 서브 타이틀
+                    Text(
+                      '가장 세련된 위스키 여행의 시작\n취향의 문을 여는 열쇠',
+                      textAlign: TextAlign.center,
+                      style: OakeyTheme.textBodyM.copyWith(
+                        color: OakeyTheme.textHint,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 50),
+
+                    // 이메일 입력 영역
+                    _buildInputLabel('EMAIL'),
+                    OakeyTheme.boxV_XS,
+                    OakeyTextField(
+                      controller: _emailController,
+                      hintText: 'oakey@email.com',
+                      keyboardType: TextInputType.emailAddress,
+                    ),
+                    OakeyTheme.boxV_L,
+
+                    // 비밀번호 입력 영역
+                    _buildInputLabel('PASSWORD'),
+                    OakeyTheme.boxV_XS,
+                    OakeyTextField(
+                      controller: _passwordController,
+                      hintText: '비밀번호를 입력하세요',
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 40),
+
+                    // 로그인 버튼
+                    OakeyButton(
+                      text: '로그인',
+                      onPressed: _onEmailLoginPressed,
+                      type: OakeyButtonType.primary,
+                    ),
+                    OakeyTheme.boxV_M,
+
+                    // 카카오 로그인 버튼
+                    SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton.icon(
+                        onPressed: () => _onLoginPressed(context),
+                        icon: Image.asset(
+                          'assets/icon/kakao_logo.png',
+                          width: 24,
+                          height: 24,
+                        ),
+                        label: const Text(
+                          '카카오로 시작하기',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _kakaoColor,
+                          foregroundColor: Colors.black,
+                          elevation: 0,
+                          // 테마 둥글기 적용
+                          shape: RoundedRectangleBorder(
+                            borderRadius: OakeyTheme.radiusM,
+                          ),
+                        ),
+                      ),
+                    ),
+                    OakeyTheme.boxV_L,
+
+                    // 하단 링크 영역
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildTextLink('비밀번호 찾기', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PwfindScreen(),
+                            ),
+                          );
+                        }),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            '|',
+                            style: OakeyTheme.textBodyS.copyWith(
+                              color: OakeyTheme.borderLine,
+                            ),
+                          ),
+                        ),
+                        _buildTextLink('회원가입', () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => SignupScreen(),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                '가장 세련된 위스키 여행의 시작\n취향의 문을 여는 열쇠',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 50),
-
-              // EMAIL 입력창
-              _buildInputField(label: 'EMAIL', hint: 'oakey@email.com', controller: _emailController),
-              const SizedBox(height: 20),
-
-              // PASSWORD 입력창
-              _buildInputField(label: 'PASSWORD', hint: '', isPassword: true, controller: _passwordController),
-              const SizedBox(height: 40),
-
-              // 일반 로그인 버튼
-              _buildActionButton(
-                text: '로그인',
-                color: _brandColor,
-                textColor: Colors.white,
-                onPressed: _onEmailLoginPressed,
-              ),
-              const SizedBox(height: 15),
-
-              // 카카오 로그인 버튼
-              _buildActionButton(
-                icon: Image.asset(
-                  'assets/icon/kakao_logo.png',
-                  width: 24,
-                  height: 24,
-                ),
-                text: '카카오로 시작하기',
-                color: _kakaoColor,
-                textColor: Colors.black,
-                onPressed: () => _onLoginPressed(context),
-              ),
-              const SizedBox(height: 20),
-
-              // 하단 텍스트 링크
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildTextLink('비밀번호 찾기', () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => PwfindScreen()),
-                    );
-                  }),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Text('|', style: TextStyle(color: Colors.grey)),
-                  ),
-                  _buildTextLink('회원가입', (){
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SignupScreen()),
-                    );
-                  }),
-                ],
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
 
-  // 공통 입력 필드 위젯
-  Widget _buildInputField({required String label, required String hint, bool isPassword = false, required TextEditingController controller}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black87),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(15),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 10,
-                offset: const Offset(0, 5),
-              ),
-            ],
-          ),
-          child: TextField(
-            obscureText: isPassword,
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: hint,
-              hintStyle: const TextStyle(color: Colors.grey),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: const BorderSide(color: Color(0xFFD7CCC8)),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(15),
-                borderSide: const BorderSide(color: Color(0xFFD7CCC8)),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // 공통 버튼 위젯
-  Widget _buildActionButton({
-    required String text,
-    required Color color,
-    required Color textColor,
-    required VoidCallback onPressed,
-    Widget? icon, // 아이콘 매개변수 추가
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      height: 60,
-      child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: icon ?? const SizedBox.shrink(), // 아이콘이 없으면 빈 공간 처리
-        label: Text(
-          text,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          foregroundColor: textColor,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+  // 입력창 상단 라벨 위젯
+  Widget _buildInputLabel(String label) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+          color: OakeyTheme.textMain,
         ),
       ),
     );
   }
 
+  // 텍스트 링크 위젯
   Widget _buildTextLink(String text, VoidCallback onTap) {
     return GestureDetector(
-      onTap: onTap, // 전달받은 함수 실행
+      onTap: onTap,
       child: Text(
         text,
-        style: const TextStyle(color: Colors.grey, fontSize: 13),
+        style: OakeyTheme.textBodyS.copyWith(color: OakeyTheme.textHint),
       ),
     );
   }
 
-  // 카카오 로그인 로직 (분기 처리 포함)
+  // 카카오 로그인 로직
   Future<void> _onLoginPressed(BuildContext context) async {
     if (_isLoggingIn) return;
     setState(() => _isLoggingIn = true);
@@ -214,31 +199,26 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (success) {
         if (!mounted) return;
-        // 서버에서 404가 왔을 때 ProfileScreen으로 가는 로직은
-        // AuthService나 ApiService에서 처리되도록 구성하는 것이 좋습니다.
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => MainScreen()));
-      } else {
-        // 실제로는 여기서 404 에러 등을 체크하여 ProfileScreen으로 넘겨야 함
-        // 예: Navigator.push(context, MaterialPageRoute(builder: (_) => ProfileScreen(token: ...)));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainScreen()),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);
     }
   }
 
-  // 이메일 로그인 로직 함수 추가
+  // 이메일 로그인 로직
   Future<void> _onEmailLoginPressed() async {
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('이메일과 비밀번호를 모두 입력해주세요.')),
-      );
+      OakeyTheme.showToast('알림', '이메일과 비밀번호를 모두 입력해주세요.', isError: true);
       return;
     }
 
     setState(() => _isLoggingIn = true);
 
     try {
-      // 2. AuthService의 로그인 메서드 호출
       final success = await AuthService.handleEmailLogin(
         email: _emailController.text,
         password: _passwordController.text,
@@ -252,9 +232,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('로그인 실패: ${e.toString()}')),
-        );
+        OakeyTheme.showToast('로그인 실패', e.toString(), isError: true);
       }
     } finally {
       if (mounted) setState(() => _isLoggingIn = false);

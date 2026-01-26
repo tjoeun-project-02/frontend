@@ -7,17 +7,17 @@ class OakeyDetailAppBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      // 상단바 배경 및 그림자 설정
+      // 상단바 배경 스타일 설정
       width: double.infinity,
-      decoration: BoxDecoration(
-        color: OakeyTheme.backgroundMain,
-        // boxShadow: OakeyTheme.cardShadow,
+      decoration: const BoxDecoration(color: OakeyTheme.backgroundMain),
+      padding: const EdgeInsets.symmetric(
+        horizontal: OakeyTheme.spacingS,
+        vertical: 10,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 뒤로가기 버튼 정렬
+          // 뒤로가기 버튼
           Align(
             alignment: Alignment.centerLeft,
             child: IconButton(
@@ -31,10 +31,10 @@ class OakeyDetailAppBar extends StatelessWidget {
               onPressed: () => Navigator.pop(context),
             ),
           ),
-          // 중앙 로고 스타일 설정
+          // 중앙 로고 텍스트
           Text(
             'Oakey',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: OakeyTheme.textTitleM.copyWith(
               color: OakeyTheme.primaryDeep,
               fontWeight: FontWeight.w900,
             ),

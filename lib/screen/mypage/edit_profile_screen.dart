@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:frontend/controller/user_controller.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
-import '../../widgets/oakey_detail_app_bar.dart';
+import '../../widgets/detail_app_bar.dart';
+import '../../widgets/components.dart';
+import '../../controller/user_controller.dart';
 
 class EditProfileScreen extends StatelessWidget {
   const EditProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final nicknameController = TextEditingController(text: UserController.to.nickname.value);
+    final nicknameController = TextEditingController(
+      text: UserController.to.nickname.value,
+    );
     final currentPwController = TextEditingController();
     final newPwController = TextEditingController();
     final confirmPwController = TextEditingController();
-    // 사용자의 현재 데이터
+
     final String currentEmail = UserController.to.email.value;
-    // 카카오 로그인 여부 (true일 경우 비밀번호 수정 비활성화)
     final bool isKakaoUser = UserController.to.loginType.value == "kakao";
 
     return Scaffold(
@@ -23,7 +25,6 @@ class EditProfileScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            // 공통 상단바 위젯 호출
             const OakeyDetailAppBar(),
             Expanded(
               child: SingleChildScrollView(
@@ -32,101 +33,117 @@ class EditProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 10),
-                    // 페이지 제목 섹션
-                    _buildPageTitle(),
-                    const SizedBox(height: 30),
-                    // 닉네임 수정 카드 섹션
+                    Text("내 정보 수정", style: OakeyTheme.textTitleL),
+                    OakeyTheme.boxV_XL,
+
+                    // 닉네임 수정 카드
                     _buildInputCard(
                       title: "NICKNAME",
                       description: "나를 표현하는 멋진 이름을 정해보세요",
                       children: [
-                        _buildCustomTextField(
+                        OakeyTextField(
                           controller: nicknameController,
-                          hint: "닉네임 입력",
+                          hintText: "닉네임 입력",
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    // 이메일 정보 카드 섹션 (수정 불가 - 비활성화)
+                    OakeyTheme.boxV_L,
+
+                    // 이메일 정보 카드 (수정 불가)
                     _buildInputCard(
                       title: "EMAIL",
                       description: "이메일 주소는 수정할 수 없습니다",
                       children: [
-                        _buildCustomTextField(
-                          hint: currentEmail,
-                          isEnabled: false,
+                        OakeyTextField(
+                          hintText: currentEmail,
+                          readOnly: true, // 읽기 전용 스타일 적용
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    // 비밀번호 수정 카드 섹션 (로그인 방식에 따라 비활성화 결정)
-                    if (!isKakaoUser)
+                    OakeyTheme.boxV_L,
+
+                    // 비밀번호 수정 카드 (카카오 유저 제외)
+                    if (!isKakaoUser) ...[
                       _buildInputCard(
                         title: "PASSWORD",
                         description: "안전한 서비스 이용을 위해 정기적으로 변경해 주세요",
                         children: [
-                          _buildCustomTextField(
-                            controller: currentPwController, // 연결
-                            hint: "현재 비밀번호",
-                            isPassword: true,
+                          OakeyTextField(
+                            controller: currentPwController,
+                            hintText: "현재 비밀번호",
+                            obscureText: true,
                           ),
-                          const SizedBox(height: 12),
-                          _buildCustomTextField(
-                            controller: newPwController, // 연결
-                            hint: "새 비밀번호",
-                            isPassword: true,
+                          OakeyTheme.boxV_S,
+                          OakeyTextField(
+                            controller: newPwController,
+                            hintText: "새 비밀번호",
+                            obscureText: true,
                           ),
-                          const SizedBox(height: 12),
-                          _buildCustomTextField(
-                            controller: confirmPwController, // 연결
-                            hint: "비밀번호 확인",
-                            isPassword: true,
+                          OakeyTheme.boxV_S,
+                          OakeyTextField(
+                            controller: confirmPwController,
+                            hintText: "비밀번호 확인",
+                            obscureText: true,
                           ),
                         ],
                       ),
-                    if (!isKakaoUser) const SizedBox(height: 40) else const SizedBox(height: 20),
+                      OakeyTheme.boxV_XL,
+                    ] else ...[
+                      OakeyTheme.boxV_L,
+                    ],
 
                     // 변경사항 저장 버튼
-                    _buildSaveButton(() async {
-                      try {
-                        bool isNicknameChanged = false;
-                        bool isPasswordChanged = false;
+                    OakeyButton(
+                      text: "변경사항 저장",
+                      type: OakeyButtonType.primary,
+                      size: OakeyButtonSize.large,
+                      onPressed: () async {
+                        try {
+                          bool isNicknameChanged = false;
+                          bool isPasswordChanged = false;
 
-                        // 1. 닉네임 변경 시도
-                        if (nicknameController.text.trim() != UserController.to.nickname.value) {
-                          print("닉네임 변경 시도 중...");
-                          isNicknameChanged = await UserController.to.updateNickname(nicknameController.text.trim());
-                          print("닉네임 변경 결과: $isNicknameChanged");
-                        }
-
-                        // 2. 비밀번호 변경 시도
-                        if (!isKakaoUser && currentPwController.text.isNotEmpty) {
-                          print("비밀번호 변경 시도 중...");
-                          isPasswordChanged = await UserController.to.updatePassword(
-                            currentPwController.text,
-                            newPwController.text,
-                            confirmPwController.text,
-                          );
-                          print("비밀번호 변경 결과: $isPasswordChanged");
-                        }
-
-                        // 3. 화면 이동 판별
-                        if (isNicknameChanged || isPasswordChanged) {
-                          print("성공 감지! 이전 화면으로 이동합니다.");
-                          // Get.back()이 작동하지 않는 경우를 대비해 확실한 닫기 명령 사용
-                          Get.until((route) => Get.currentRoute == '/MainScreen' || route.isFirst);
-                          // 위 방법이 복잡하면 단순히 아래 한 줄만 써보세요.
-                          // Get.back();
-                        } else {
-                          if (nicknameController.text.trim() == UserController.to.nickname.value && currentPwController.text.isEmpty) {
-                            Get.snackbar("알림", "변경사항이 없습니다.");
+                          // 닉네임 변경 시도
+                          if (nicknameController.text.trim() !=
+                              UserController.to.nickname.value) {
+                            isNicknameChanged = await UserController.to
+                                .updateNickname(nicknameController.text.trim());
                           }
+
+                          // 비밀번호 변경 시도
+                          if (!isKakaoUser &&
+                              currentPwController.text.isNotEmpty) {
+                            isPasswordChanged = await UserController.to
+                                .updatePassword(
+                                  currentPwController.text,
+                                  newPwController.text,
+                                  confirmPwController.text,
+                                );
+                          }
+
+                          // 결과 처리 및 이동
+                          if (isNicknameChanged || isPasswordChanged) {
+                            Get.until(
+                              (route) =>
+                                  Get.currentRoute == '/MainScreen' ||
+                                  route.isFirst,
+                            );
+                            OakeyTheme.showToast("완료", "정보가 성공적으로 수정되었습니다.");
+                          } else {
+                            if (nicknameController.text.trim() ==
+                                    UserController.to.nickname.value &&
+                                currentPwController.text.isEmpty) {
+                              OakeyTheme.showToast("알림", "변경사항이 없습니다.");
+                            }
+                          }
+                        } catch (e) {
+                          OakeyTheme.showToast(
+                            "오류",
+                            "작업 중 에러가 발생했습니다.",
+                            isError: true,
+                          );
                         }
-                      } catch (e) {
-                        print("저장 버튼 실행 중 에러 발생: $e");
-                        Get.snackbar("오류", "작업 중 에러가 발생했습니다.");
-                      }
-                    })
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -137,22 +154,7 @@ class EditProfileScreen extends StatelessWidget {
     );
   }
 
-  // 상단 페이지 제목 위젯 빌더
-  Widget _buildPageTitle() {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        "내 정보 수정",
-        style: TextStyle(
-          fontSize: OakeyTheme.fontSizeL,
-          fontWeight: FontWeight.w800,
-          color: OakeyTheme.textMain,
-        ),
-      ),
-    );
-  }
-
-  // 각 입력 항목을 감싸는 공통 카드 위젯 빌더
+  // 입력 카드 위젯 빌더
   Widget _buildInputCard({
     required String title,
     required String description,
@@ -160,19 +162,14 @@ class EditProfileScreen extends StatelessWidget {
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
-        borderRadius: OakeyTheme.brCard,
-        boxShadow: OakeyTheme.cardShadow,
-        // border: Border.all(color: OakeyTheme.borderLine),
-      ),
+      // 테마의 카드 스타일 적용
+      decoration: OakeyTheme.decoCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
-              fontSize: OakeyTheme.fontSizeS,
+            style: OakeyTheme.textBodyS.copyWith(
               fontWeight: FontWeight.w600,
               color: OakeyTheme.textSub,
             ),
@@ -182,78 +179,9 @@ class EditProfileScreen extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             description,
-            style: TextStyle(fontSize: 12, color: OakeyTheme.textHint),
+            style: OakeyTheme.textBodyS.copyWith(color: OakeyTheme.textHint),
           ),
         ],
-      ),
-    );
-  }
-
-  // 리스트 상세페이지와 통일된 디자인의 커스텀 텍스트 필드 빌더
-  Widget _buildCustomTextField({
-    TextEditingController? controller,
-    required String hint,
-    bool isPassword = false,
-    bool isEnabled = true,
-  }) {
-    return TextField(
-      controller: controller,
-      enabled: isEnabled,
-      obscureText: isPassword,
-      style: TextStyle(
-        color: isEnabled ? OakeyTheme.textMain : OakeyTheme.textHint,
-      ),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: OakeyTheme.textHint),
-        filled: true,
-        fillColor: isEnabled
-            ? OakeyTheme.surfacePure
-            : OakeyTheme.surfaceMuted.withOpacity(0.5),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: OakeyTheme.borderLine),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: OakeyTheme.borderLine),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: OakeyTheme.primaryDeep,
-            width: 1.5,
-          ),
-        ),
-        disabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: OakeyTheme.borderLine.withOpacity(0.5)),
-        ),
-      ),
-    );
-  }
-
-  // 변경사항 저장 버튼 빌더
-  Widget _buildSaveButton(VoidCallback onTap) {
-    return ElevatedButton(
-      onPressed: onTap,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: OakeyTheme.primaryDeep,
-        minimumSize: const Size(double.infinity, 60),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-        elevation: 0,
-      ),
-      child: const Text(
-        "변경사항 저장",
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-        ),
       ),
     );
   }
