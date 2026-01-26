@@ -610,22 +610,26 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
   // 테이스팅 노트 입력창 빌더
   Widget _buildTastingNoteInputBox(BuildContext context) {
+    bool isReadOnly = _isNoteSaved && !_isEditing;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: OakeyTheme.surfacePure,
+        color: isReadOnly
+            ? OakeyTheme.surfaceMuted.withOpacity(0.3)
+            : OakeyTheme.surfacePure,
         borderRadius: OakeyTheme.radiusL,
         border: Border.all(color: OakeyTheme.borderLine),
       ),
       child: TextField(
         controller: _noteController,
         focusNode: _noteFocusNode,
+        readOnly: isReadOnly,
         minLines: 3,
         maxLines: null,
         style: OakeyTheme.textBodyM.copyWith(height: 1.5),
-        decoration: const InputDecoration(
-          hintText: '이 위스키의 맛과 향을 기록해보세요.',
+        decoration: InputDecoration(
+          hintText: isReadOnly ? '작성된 테이스팅 노트입니다.' : '이 위스키의 맛과 향을 기록해보세요.',
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
