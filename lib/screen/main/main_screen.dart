@@ -11,10 +11,11 @@ import '../../widgets/bottom_bar.dart';
 import '../../widgets/search_bar.dart';
 
 import '../list/whisky_list_screen.dart';
+import '../list/whisky_detail_screen.dart';
 import '../mypage/mypage_screen.dart';
 import '../recommend/survey_screen.dart';
 import 'guide_screen.dart';
-import '../../models/whisky.dart'; // Whisky 모델 임포트 필요
+// import '../../models/whisky.dart';
 
 class MainScreen extends StatelessWidget {
   MainScreen({super.key});
@@ -64,7 +65,7 @@ class MainScreen extends StatelessWidget {
     );
   }
 
-  // 홈 탭 메인 화면
+  // 홈 탭 메인 화면 구성
   Widget _buildHomeBody() {
     return SingleChildScrollView(
       child: Column(
@@ -88,7 +89,7 @@ class MainScreen extends StatelessWidget {
             hintText: '위스키 이름이나 맛을 검색해보세요',
             onSubmitted: (value) {
               whiskyController.loadData();
-              homeController.changeTabIndex(1); // 리스트 탭으로 이동
+              homeController.changeTabIndex(1);
             },
             onCameraTap: () {
               print("카메라 버튼 클릭");
@@ -125,7 +126,7 @@ class MainScreen extends StatelessWidget {
 
           OakeyTheme.boxV_XL,
 
-          // ★ 추천 위스키 영역 (데이터 연동)
+          // 오늘의 추천 위스키 영역
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Obx(
@@ -140,47 +141,68 @@ class MainScreen extends StatelessWidget {
           OakeyTheme.boxV_M,
           _buildRecommendationList(),
 
-          const SizedBox(height: 40), // 하단 여백
+          const SizedBox(height: 40),
         ],
       ),
     );
   }
 
-  // 최근 검색어 칩 리스트
+  // 최근 검색어 리스트 빌더
   Widget _buildRecentSearches() {
-    return Obx(
-      () => Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: homeController.recentSearches
-            .map(
-              (tag) => ActionChip(
+    return Obx(() {
+      // 최근 검색어가 없을 경우 처리
+      if (homeController.recentSearches.isEmpty) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Text(
+            "최근 검색어가 없습니다.",
+            style: OakeyTheme.textBodyS.copyWith(color: OakeyTheme.textSub),
+          ),
+        );
+      }
+
+      // 가로 스크롤 가능한 리스트
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal, // 가로 스크롤 활성화
+        child: Row(
+          children: homeController.recentSearches.map((tag) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8.0), // 태그 간격 좁게 (8.0)
+              child: ActionChip(
                 label: Text(
                   tag,
                   style: OakeyTheme.textBodyS.copyWith(
-                    color: OakeyTheme.textSub,
+                    color: OakeyTheme.textMain, // 텍스트 색상 조금 더 진하게
+                    fontSize: 13,
                   ),
                 ),
-                backgroundColor: OakeyTheme.surfacePure,
+                //
+                backgroundColor: OakeyTheme.textHint.withOpacity(0.2),
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                side: BorderSide.none, // 테두리 제거
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ), // 내부 여백 축소
                 shape: RoundedRectangleBorder(
-                  borderRadius: OakeyTheme.radiusS,
-                  side: const BorderSide(color: OakeyTheme.borderLine),
+                  borderRadius: BorderRadius.circular(8), // 덜 둥글게 (Radius 8)
                 ),
                 onPressed: () {
+                  // 칩 클릭 시 재검색 로직 (기존 동일)
                   whiskyController.searchController.text = tag;
+                  homeController.addRecentSearch(tag);
                   whiskyController.loadData();
                   homeController.changeTabIndex(1);
                 },
               ),
-            )
-            .toList(),
-      ),
-    );
+            );
+          }).toList(),
+        ),
+      );
+    });
   }
 
-  // 가이드 배너
+  // 가이드 배너 빌더
   Widget _buildGuideBanner() {
     return Container(
       width: double.infinity,
@@ -245,31 +267,30 @@ class MainScreen extends StatelessWidget {
     );
   }
 
-  // 추천 위스키 리스트
+  // 추천 위스키 리스트 빌더
   Widget _buildRecommendationList() {
     return Padding(
       padding: const EdgeInsets.only(bottom: 30),
       child: SizedBox(
         height: 220,
         child: Obx(() {
-          // 데이터가 없을 때 처리
           if (whiskyController.recommendedWhiskies.isEmpty) {
             return const Center(child: Text("데이터를 불러오는 중입니다..."));
           }
 
           return ListView.separated(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20), // 리스트 양옆 여백
+            padding: const EdgeInsets.symmetric(horizontal: 20),
             itemCount: whiskyController.recommendedWhiskies.length,
             separatorBuilder: (_, __) => const SizedBox(width: 16),
             itemBuilder: (context, index) {
               final whisky = whiskyController.recommendedWhiskies[index];
 
-              // 위스키 카드 UI
+              // 카드 클릭 시 상세 페이지 이동
               return GestureDetector(
                 onTap: () {
-                  // 상세 페이지 이동 등 구현 가능
-                  print("${whisky.wsName} 클릭됨");
+                  // WhiskyDetailScreen으로 데이터 전달하며 이동
+                  Get.to(() => WhiskyDetailScreen(whisky: whisky));
                 },
                 child: Container(
                   width: 160,
@@ -288,14 +309,14 @@ class MainScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // 이미지 영역 (없으면 아이콘)
+                      // 이미지 영역
                       Expanded(
                         child: Center(
                           child:
                               whisky.wsImage != null &&
                                   whisky.wsImage!.isNotEmpty
                               ? Image.network(
-                                  whisky.wsImage!, // 이미지 URL (서버 주소 확인 필요)
+                                  whisky.wsImage!,
                                   errorBuilder: (context, error, stackTrace) {
                                     return const Icon(
                                       Icons.liquor,
@@ -312,7 +333,7 @@ class MainScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      // 텍스트 정보
+                      // 카테고리
                       Text(
                         whisky.wsCategory,
                         style: const TextStyle(
@@ -322,6 +343,7 @@ class MainScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
+                      // 위스키 이름
                       Text(
                         whisky.wsNameKo.isNotEmpty
                             ? whisky.wsNameKo
@@ -335,6 +357,7 @@ class MainScreen extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
+                      // 별점
                       Row(
                         children: [
                           const Icon(
