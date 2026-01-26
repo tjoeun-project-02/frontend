@@ -37,7 +37,7 @@ class MyApp extends StatelessWidget {
 
       scrollBehavior: OakeyTheme.globalScrollBehavior,
 
-      home: LoginScreen(), // 스플래시로 변경
+      home: SplashScreen(), // 스플래시로 변경
     );
   }
 }

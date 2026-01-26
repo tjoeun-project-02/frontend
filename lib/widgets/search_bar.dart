@@ -49,36 +49,46 @@ class _OakeySearchBarState extends State<OakeySearchBar> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        height: 56,
+        duration: const Duration(milliseconds: 250),
+        height: 58,
         decoration: BoxDecoration(
           color: OakeyTheme.surfacePure,
           borderRadius: BorderRadius.circular(16),
           border: _isFocused
               ? Border.all(color: OakeyTheme.primaryDeep, width: 1.5)
-              : Border.all(color: Colors.transparent, width: 1.5),
+              : Border.all(
+                  color: OakeyTheme.borderLine.withOpacity(0.5),
+                  width: 1.0,
+                ),
           boxShadow: [
             BoxShadow(
               color: OakeyTheme.primaryDeep.withOpacity(
-                _isFocused ? 0.08 : 0.05,
+                _isFocused ? 0.15 : 0.03,
               ),
-              blurRadius: _isFocused ? 12 : 20,
-              offset: const Offset(0, 4),
+              blurRadius: _isFocused ? 15 : 10,
+              offset: const Offset(0, 8),
+              spreadRadius: _isFocused ? 1 : 0,
             ),
           ],
         ),
         child: Row(
           children: [
             Padding(
-              padding: const EdgeInsets.only(left: 16.0),
+              padding: const EdgeInsets.only(left: 18.0, right: 12.0),
               child: Icon(
                 Icons.search_rounded,
                 color: _isFocused
                     ? OakeyTheme.primaryDeep
                     : OakeyTheme.textHint,
-                size: 24,
+                size: 26,
               ),
             ),
+            Container(
+              width: 1,
+              height: 24,
+              color: OakeyTheme.borderLine.withOpacity(0.5),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: TextField(
                 controller: widget.controller,
@@ -87,11 +97,11 @@ class _OakeySearchBarState extends State<OakeySearchBar> {
 
                 // 검색바 내부에서 '저장' 로직을 수행하고, 부모에게 알림
                 onSubmitted: (value) {
-                  if (value.trim().isNotEmpty) {
-                    // 1. 자동으로 최근 검색어에 저장
-                    Get.find<HomeController>().addRecentSearch(value);
-                  }
-                  // 2. 부모 위젯(MainScreen)에서 정의한 나머지 동작(화면 이동 등) 실행
+                  // 1. 공백 제거(trim) 후 비어있으면 아무것도 안 하고 함수 종료!
+                  if (value.trim().isEmpty) return;
+
+                  // 2. 입력값이 있을 때만 저장하고 부모에게 알림
+                  Get.find<HomeController>().addRecentSearch(value);
                   widget.onSubmitted?.call(value);
                 },
 
@@ -100,7 +110,8 @@ class _OakeySearchBarState extends State<OakeySearchBar> {
                 style: const TextStyle(
                   fontSize: 16,
                   color: OakeyTheme.textMain,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.2,
                 ),
                 decoration: InputDecoration(
                   hintText: widget.hintText,
@@ -112,7 +123,7 @@ class _OakeySearchBarState extends State<OakeySearchBar> {
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  contentPadding: EdgeInsets.zero,
                   isDense: true,
                 ),
               ),

@@ -171,7 +171,7 @@ class OakeyTheme {
     Get.snackbar(
       title,
       message,
-      snackPosition: SnackPosition.BOTTOM,
+      snackPosition: SnackPosition.TOP,
       backgroundColor: isError
           ? statusError.withOpacity(0.95)
           : primaryDeep.withOpacity(0.95),
