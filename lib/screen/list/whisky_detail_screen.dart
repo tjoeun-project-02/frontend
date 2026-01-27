@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-// import 'package:get/get.dart';
+import 'package:get/get.dart';
 
 import '../../Directory/core/theme.dart';
-import '../../widgets/detail_app_bar.dart'; // 파일명 확인 필요
+import '../../widgets/detail_app_bar.dart';
 import '../../models/whisky.dart';
 import '../../services/api_service.dart';
 import '../../controller/user_controller.dart';
+import '../../controller/whisky_controller.dart';
+import '../../controller/tasting_note_controller.dart';
 
 class WhiskyDetailScreen extends StatefulWidget {
   final Whisky whisky;
@@ -18,6 +20,9 @@ class WhiskyDetailScreen extends StatefulWidget {
 }
 
 class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
+  // [수정됨] Get.find 대신 Get.put 사용 (컨트롤러가 없으면 생성)
+  final WhiskyController controller = Get.put(WhiskyController());
+
   final TextEditingController _noteController = TextEditingController();
   final FocusNode _noteFocusNode = FocusNode();
 
@@ -53,11 +58,13 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
 
       if (serverData != null) {
         String serverContent = serverData['content'];
-        setState(() {
-          _noteController.text = serverContent;
-          _isNoteSaved = true;
-          _isEditing = false;
-        });
+        if (mounted) {
+          setState(() {
+            _noteController.text = serverContent;
+            _isNoteSaved = true;
+            _isEditing = false;
+          });
+        }
       }
     }
   }
@@ -76,10 +83,11 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     } else {
       if (!_isEditing) {
         setState(() => _isEditing = true);
-        _noteFocusNode.requestFocus();
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _noteFocusNode.requestFocus();
+        });
       } else {
         _saveProcess('수정이 완료되었습니다.');
-        setState(() => _isEditing = false);
       }
     }
   }
@@ -113,14 +121,28 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     }
 
     if (serverSuccess) {
-      setState(() => _isNoteSaved = true);
-    }
+      await _loadMyNote(); // 저장 후 데이터 갱신
 
-    OakeyTheme.showToast(
-      _isEditing ? "수정 완료" : "등록 완료",
-      serverSuccess ? message : "서버 저장 실패",
-      isError: !serverSuccess,
-    );
+      if (mounted) {
+        setState(() {
+          _isNoteSaved = true;
+          _isEditing = false;
+        });
+      }
+
+      if (Get.isRegistered<TastingNoteController>()) {
+        await Get.find<TastingNoteController>().fetchNotes();
+        // fetchNotes()는 목록을 서버에서 새로 가져오는 함수 (본인 함수명에 맞게 수정)
+      }
+
+      OakeyTheme.showToast(
+        _isEditing ? "수정 완료" : "등록 완료",
+        message,
+        isError: false,
+      );
+    } else {
+      OakeyTheme.showToast("오류", "서버 저장 실패", isError: true);
+    }
   }
 
   // 노트 삭제 로직
@@ -135,21 +157,24 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     }
 
     if (serverSuccess) {
-      setState(() {
-        _noteController.clear();
-        _isNoteSaved = false;
-        _isEditing = false;
-      });
-    }
+      if (mounted) {
+        setState(() {
+          _noteController.clear();
+          _isNoteSaved = false;
+          _isEditing = false;
+        });
+      }
 
-    OakeyTheme.showToast(
-      "삭제 완료",
-      serverSuccess ? "테이스팅 노트가 삭제되었습니다." : "서버 삭제 실패",
-      isError: !serverSuccess,
-    );
+      if (Get.isRegistered<TastingNoteController>()) {
+        await Get.find<TastingNoteController>().fetchNotes();
+      }
+
+      OakeyTheme.showToast("삭제 완료", "테이스팅 노트가 삭제되었습니다.", isError: false);
+    } else {
+      OakeyTheme.showToast("오류", "서버 삭제 실패", isError: true);
+    }
   }
 
-  // 맛 가이드 팝업 표시
   void _showTasteHelp(BuildContext context) {
     showDialog(
       context: context,
@@ -185,7 +210,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 맛 가이드 아이템 빌더
   Widget _buildHelpItem(String title, String desc) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
@@ -238,7 +262,12 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 20),
-                    _buildMainWhiskyInfo(name, enName, whisky.wsImage),
+                    _buildMainWhiskyInfo(
+                      name,
+                      enName,
+                      whisky.wsImage,
+                      whisky.wsId,
+                    ),
 
                     OakeyTheme.boxV_XL,
                     const Divider(
@@ -312,45 +341,88 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 메인 정보 표시 영역
-  Widget _buildMainWhiskyInfo(String name, String enName, String? imageUrl) {
+  // 메인 정보 표시 영역 (좋아요 버튼 포함)
+  Widget _buildMainWhiskyInfo(
+    String name,
+    String enName,
+    String? imageUrl,
+    int wsId,
+  ) {
     return Center(
       child: Column(
         children: [
-          Container(
-            width: 180,
-            height: 180,
-            alignment: Alignment.center,
-
-            // ★ 1. 여백 조정: 큰 이미지니까 여백을 조금 더 넉넉하게(16) 주면 예쁩니다.
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-
-            decoration: BoxDecoration(
-              color: OakeyTheme.surfaceMuted,
-              borderRadius: OakeyTheme.radiusL,
-            ),
-            child: imageUrl != null && imageUrl.isNotEmpty
-                ? ClipRRect(
+          SizedBox(
+            width: 200,
+            height: 200,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 180,
+                  height: 180,
+                  alignment: Alignment.center,
+                  padding: const EdgeInsets.symmetric(vertical: 16.0),
+                  decoration: BoxDecoration(
+                    color: OakeyTheme.surfaceMuted,
                     borderRadius: OakeyTheme.radiusL,
-                    child: Image.network(
-                      imageUrl,
-
-                      fit: BoxFit.contain,
-
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.liquor_rounded,
-                        size: 80, // 아이콘 크기도 살짝 조정
-                        color: OakeyTheme.primarySoft,
-                      ),
-                    ),
-                  )
-                : const Icon(
-                    Icons.liquor_rounded,
-                    size: 80,
-                    color: OakeyTheme.primarySoft,
                   ),
+                  child: imageUrl != null && imageUrl.isNotEmpty
+                      ? ClipRRect(
+                          borderRadius: OakeyTheme.radiusL,
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(
+                                  Icons.liquor_rounded,
+                                  size: 80,
+                                  color: OakeyTheme.primarySoft,
+                                ),
+                          ),
+                        )
+                      : const Icon(
+                          Icons.liquor_rounded,
+                          size: 80,
+                          color: OakeyTheme.primarySoft,
+                        ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Obx(() {
+                    final bool isLiked = controller.isLiked(wsId);
+                    return GestureDetector(
+                      onTap: () {
+                        controller.toggleLike(wsId);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.9),
+                          shape: BoxShape.circle,
+                          // boxShadow: [
+                          //   BoxShadow(
+                          //     color: Colors.black.withOpacity(0.1),
+                          //     blurRadius: 8,
+                          //     offset: const Offset(0, 2),
+                          //   ),
+                          // ],
+                        ),
+                        child: Icon(
+                          isLiked ? Icons.favorite : Icons.favorite_border,
+                          color: isLiked ? Colors.red : OakeyTheme.textHint,
+                          size: 24,
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
+
           OakeyTheme.boxV_L,
+
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: Text(
@@ -376,7 +448,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 섹션 제목 빌더
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, bottom: 8),
@@ -384,7 +455,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 섹션 설명 빌더
   Widget _buildSectionDesc(BuildContext context, String text) {
     return Padding(
       padding: const EdgeInsets.only(left: 20, bottom: 16),
@@ -395,7 +465,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 품질 지표 카드 빌더
   Widget _buildQualityCard(
     BuildContext context, {
     required String score,
@@ -404,7 +473,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(28),
-      // 테마의 카드 스타일 적용
       decoration: OakeyTheme.decoCard,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -439,7 +507,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 상세 정보 그리드 빌더
   Widget _buildInfoGrid(
     BuildContext context, {
     required List<_InfoItem> items,
@@ -484,7 +551,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 향 태그 목록 빌더
   Widget _buildFlavorTags(List<String> tags) {
     if (tags.isEmpty) {
       return const Padding(
@@ -523,7 +589,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 레이더 차트 빌더
   Widget _buildTasteProfileChart(
     BuildContext context,
     Map<String, dynamic> profile,
@@ -538,14 +603,9 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     ];
 
     final List<double> values = labels.map((label) {
-      // 1. 라벨을 소문자로 변환 (FRUITY -> fruity)
       final String key = label.toLowerCase();
-
-      // 2. Map에서 값 추출
       var val = profile[key] ?? profile[label] ?? 0;
-
       double numVal = double.tryParse(val.toString()) ?? 0.0;
-      // 3. 10점 만점 기준이면 10.0으로 나누기
       return (numVal / 10.0).clamp(0.0, 1.0);
     }).toList();
 
@@ -557,7 +617,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 테이스팅 노트 헤더 빌더
   Widget _buildTastingNoteHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
@@ -597,7 +656,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 액션 버튼 스타일 빌더
   Widget _buildActionButton(IconData icon, String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -618,7 +676,6 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
     );
   }
 
-  // 테이스팅 노트 입력창 빌더
   Widget _buildTastingNoteInputBox(BuildContext context) {
     bool isReadOnly = _isNoteSaved && !_isEditing;
     return Container(
@@ -652,9 +709,8 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
   }
 }
 
-// 레이더 차트 페인터
 class RadarChartPainter extends CustomPainter {
-  final List<double> values; // 0.0 ~ 1.0 사이로 정규화된 값
+  final List<double> values;
   final List<String> labels;
 
   RadarChartPainter({required this.values, required this.labels});
@@ -662,17 +718,14 @@ class RadarChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    // 전체 크기의 80%를 반지름으로 사용 (텍스트 여백 확보)
     final double maxRadius = size.width / 2 * 0.8;
     final angleStep = (2 * math.pi) / values.length;
 
-    // --- 1. 배경 가이드라인 (동심원/거미줄) ---
     final guidePaint = Paint()
       ..color = OakeyTheme.borderLine.withOpacity(0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
 
-    // 5개의 눈금선 생성 (각 선은 2, 4, 6, 8, 10점을 의미)
     for (int i = 1; i <= 5; i++) {
       final tickRadius = maxRadius * (i / 5);
       final path = Path();
@@ -689,7 +742,6 @@ class RadarChartPainter extends CustomPainter {
       canvas.drawPath(path, guidePaint);
     }
 
-    // --- 2. 중심에서 뻗어나가는 축 라인 ---
     for (int j = 0; j < values.length; j++) {
       final angle = j * angleStep - math.pi / 2;
       canvas.drawLine(
@@ -702,12 +754,10 @@ class RadarChartPainter extends CustomPainter {
       );
     }
 
-    // --- 3. 실제 데이터 영역 (Data Path) ---
     if (values.isNotEmpty) {
       final dataPath = Path();
       for (int i = 0; i < values.length; i++) {
         final angle = i * angleStep - math.pi / 2;
-        // values[i]가 1.0일 때 정확히 maxRadius(10점 라인)에 닿음
         final x = center.dx + maxRadius * values[i] * math.cos(angle);
         final y = center.dy + maxRadius * values[i] * math.sin(angle);
 
@@ -718,7 +768,6 @@ class RadarChartPainter extends CustomPainter {
       }
       dataPath.close();
 
-      // 내부 채우기
       canvas.drawPath(
         dataPath,
         Paint()
@@ -726,16 +775,14 @@ class RadarChartPainter extends CustomPainter {
           ..style = PaintingStyle.fill,
       );
 
-      // 외곽 테두리
       canvas.drawPath(
         dataPath,
         Paint()
           ..color = OakeyTheme.accentOrange
           ..style = PaintingStyle.stroke
-          ..strokeWidth = 2.5, // 선을 조금 더 두껍게 하여 가시성 확보
+          ..strokeWidth = 2.5,
       );
 
-      // --- 4. 데이터 포인트 (꼭짓점 점 찍기) ---
       final pointPaint = Paint()
         ..color = OakeyTheme.accentOrange
         ..style = PaintingStyle.fill;
@@ -750,14 +797,12 @@ class RadarChartPainter extends CustomPainter {
         final y = center.dy + maxRadius * values[i] * math.sin(angle);
 
         canvas.drawCircle(Offset(x, y), 4.5, pointPaint);
-        canvas.drawCircle(Offset(x, y), 2.5, whiteDotPaint); // 도넛 형태 포인트
+        canvas.drawCircle(Offset(x, y), 2.5, whiteDotPaint);
       }
     }
 
-    // --- 5. 라벨 텍스트 그리기 ---
     for (int i = 0; i < labels.length; i++) {
       final angle = i * angleStep - math.pi / 2;
-      // 텍스트 위치를 반지름보다 조금 더 바깥으로 배치
       final textOffset = Offset(
         center.dx + (maxRadius + 28) * math.cos(angle),
         center.dy + (maxRadius + 28) * math.sin(angle),

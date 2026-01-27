@@ -10,113 +10,155 @@ import 'edit_profile_screen.dart';
 import 'liked_whisky_screen.dart';
 import 'tasting_note_screen.dart';
 
-class MyPage extends StatelessWidget {
+// 1. StatefulWidget으로 변경하여 생명주기(initState)를 사용합니다.
+class MyPage extends StatefulWidget {
   const MyPage({super.key});
 
   @override
+  State<MyPage> createState() => _MyPageState();
+}
+
+class _MyPageState extends State<MyPage> {
+  // 2. 컨트롤러를 클래스 멤버로 선언
+  final whiskyController = Get.put(WhiskyController());
+  final noteController = Get.put(TastingNoteController());
+
+  @override
+  void initState() {
+    super.initState();
+    // 3. 마이페이지에 들어올 때마다 데이터를 새로고침하도록 명령합니다.
+    // (GetX는 컨트롤러가 이미 살아있으면 onInit을 다시 실행하지 않기 때문에 수동으로 호출해야 합니다)
+
+    // 테이스팅 노트 갯수 갱신
+    if (Get.isRegistered<TastingNoteController>()) {
+      noteController.fetchNotes();
+    }
+
+    // 찜한 위스키 갯수 갱신 (WhiskyController에 해당 함수가 있다면 호출하세요)
+    // 예: whiskyController.fetchLikedWhiskies();
+    // 만약 WhiskyController가 실시간형(Stream)이 아니라면 여기서 업데이트해주는 게 좋습니다.
+  }
+
+  @override
   Widget build(BuildContext context) {
-    // 컨트롤러 주입 (데이터 갯수 확인용)
-    // putOrFind: 이미 메모리에 있으면 찾고, 없으면 생성
-    final whiskyController = Get.put(WhiskyController());
-    final noteController = Get.put(TastingNoteController());
+    return Scaffold(
+      backgroundColor: OakeyTheme.backgroundMain,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 30),
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 30),
+            // 사용자 프로필 카드
+            _buildUserProfile(),
+            OakeyTheme.boxV_XL,
 
-          // 사용자 프로필 카드
-          _buildUserProfile(),
-          OakeyTheme.boxV_XL,
-
-          // 메뉴 섹션 타이틀
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 16),
-            child: Text("계정 설정", style: OakeyTheme.textTitleM),
-          ),
-
-          // 1. 내 정보 수정 (뱃지 없음)
-          _buildMenuTile(
-            title: "내 정보 수정",
-            icon: Icons.person_outline_rounded,
-            onTap: () => Get.to(() => const EditProfileScreen()),
-          ),
-
-          // 2. 내가 찜한 위스키 (실시간 갯수 연동)
-          _buildMenuTile(
-            title: "내가 찜한 위스키",
-            icon: Icons.favorite_border_rounded,
-            onTap: () => Get.to(() => const LikedWhiskyScreen()),
-            // Obx로 감싸서 찜 목록 갯수가 변하면 자동 갱신
-            badge: Obx(
-              () => _buildCountBadge(whiskyController.likedWhiskyIds.length),
+            // 메뉴 섹션 타이틀
+            Padding(
+              padding: const EdgeInsets.only(left: 4, bottom: 16),
+              child: Text("계정 설정", style: OakeyTheme.textTitleM),
             ),
-          ),
 
-          // 3. 테이스팅 노트 (실시간 갯수 연동)
-          _buildMenuTile(
-            title: "Tasting Notes",
-            icon: Icons.edit_note_rounded,
-            onTap: () => Get.to(() => const TastingNoteScreen()),
-            // Obx로 감싸서 노트 갯수가 변하면 자동 갱신
-            badge: Obx(() => _buildCountBadge(noteController.notes.length)),
-          ),
+            // 1. 내 정보 수정
+            _buildMenuTile(
+              title: "내 정보 수정",
+              icon: Icons.person_outline_rounded,
+              onTap: () => Get.to(() => const EditProfileScreen()),
+            ),
 
-          const SizedBox(height: 48),
+            // 2. 내가 찜한 위스키
+            _buildMenuTile(
+              title: "내가 찜한 위스키",
+              icon: Icons.favorite_border_rounded,
+              onTap: () => Get.to(() => const LikedWhiskyScreen()),
+              badge: Obx(
+                () => _buildCountBadge(whiskyController.likedWhiskyIds.length),
+              ),
+            ),
 
-          // 로그아웃 버튼
-          _buildLogoutButton(),
-          const SizedBox(height: 40),
-        ],
+            // 3. 테이스팅 노트
+            _buildMenuTile(
+              title: "Tasting Notes",
+              icon: Icons.edit_note_rounded,
+              onTap: () async {
+                // 상세 화면으로 갔다가 돌아올 때도 갱신하고 싶다면 await 사용
+                await Get.to(() => const TastingNoteScreen());
+                noteController.fetchNotes();
+              },
+              badge: Obx(() => _buildCountBadge(noteController.notes.length)),
+            ),
+
+            const SizedBox(height: 48),
+
+            // 로그아웃 버튼
+            _buildLogoutButton(),
+            const SizedBox(height: 40),
+          ],
+        ),
       ),
     );
   }
 
-  // 사용자 프로필 카드 빌더
+  // 프로필 카드
   Widget _buildUserProfile() {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
-      // 테마 카드 스타일 적용
       decoration: OakeyTheme.decoCard,
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: OakeyTheme.surfaceMuted,
+          // 프로필 이미지 영역
+          Container(
+            width: 80,
+            height: 80,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: OakeyTheme.surfaceMuted.withOpacity(0.5),
+              borderRadius: BorderRadius.circular(20),
+            ),
             child: const Icon(
-              Icons.person,
-              size: 35,
+              Icons.person_rounded,
+              size: 40,
               color: OakeyTheme.primarySoft,
             ),
           ),
+
           const SizedBox(width: 20),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Obx(
-                () => Text(
-                  "${UserController.to.nickname.value} 님",
-                  style: OakeyTheme.textTitleL,
+
+          // 텍스트 정보 영역
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Obx(
+                  () => Text(
+                    "${UserController.to.nickname.value} 님",
+                    style: OakeyTheme.textTitleL,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 4),
-              Text("반가워요! 오늘도 즐거운 위스키 타임 되세요.", style: OakeyTheme.textBodyS),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  "반가워요! 오늘도 즐거운\n위스키 타임 되세요.",
+                  style: OakeyTheme.textBodyS.copyWith(
+                    color: OakeyTheme.textHint,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // 메뉴 타일 빌더 (badge 위젯을 선택적으로 받음)
+  // 메뉴 타일 빌더
   Widget _buildMenuTile({
     required String title,
     required IconData icon,
     required VoidCallback onTap,
-    Widget? badge, // 갯수 표시용 위젯 (선택사항)
+    Widget? badge,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -128,12 +170,19 @@ class MyPage extends StatelessWidget {
           decoration: OakeyTheme.decoCard,
           child: Row(
             children: [
-              Icon(icon, size: 22, color: OakeyTheme.textMain),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: OakeyTheme.backgroundMain,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 22, color: OakeyTheme.textMain),
+              ),
               const SizedBox(width: 16),
+
               Text(title, style: OakeyTheme.textBodyL),
               const SizedBox(width: 8),
 
-              // 뱃지가 있으면 표시
               if (badge != null) badge,
 
               const Spacer(),
@@ -149,9 +198,10 @@ class MyPage extends StatelessWidget {
     );
   }
 
-  // 갯수 표시 뱃지 디자인 (Obx 내부에서 호출됨)
+  // 갯수 뱃지
   Widget _buildCountBadge(int count) {
-    // 0개여도 표시하거나, 숨기고 싶으면 if (count == 0) return SizedBox.shrink(); 추가
+    if (count == 0) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
@@ -168,14 +218,17 @@ class MyPage extends StatelessWidget {
     );
   }
 
-  // 로그아웃 버튼 빌더
+  // 로그아웃 버튼
   Widget _buildLogoutButton() {
     return Center(
       child: TextButton(
         onPressed: () {
           UserController.to.logout();
         },
-        style: TextButton.styleFrom(foregroundColor: OakeyTheme.textHint),
+        style: TextButton.styleFrom(
+          foregroundColor: OakeyTheme.textHint,
+          overlayColor: OakeyTheme.textHint.withOpacity(0.1),
+        ),
         child: Text(
           "로그아웃",
           style: OakeyTheme.textBodyM.copyWith(

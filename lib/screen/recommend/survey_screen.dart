@@ -125,6 +125,8 @@ class SurveyScreen extends StatelessWidget {
       final currentIdx = surveyCtrl.currentQuestionIndex.value;
       final progress = (currentIdx + 1) / totalQuestions;
 
+      final int? selectedOptionIndex = surveyCtrl.selectedHistory[currentIdx];
+
       return Column(
         children: [
           // 1. 상단 진행바
@@ -141,7 +143,6 @@ class SurveyScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center, // 세로 중앙 정렬
-                crossAxisAlignment: CrossAxisAlignment.center, // 가로 중앙 정렬
                 children: [
                   const Spacer(flex: 1),
 
@@ -178,18 +179,23 @@ class SurveyScreen extends StatelessWidget {
                   const Spacer(flex: 1),
 
                   // 답변 옵션 버튼들 (가운데 정렬 및 너비 조정)
-                  ...(question['options'] as List).map((opt) {
+                  ...(question['options'] as List).asMap().entries.map((entry) {
+                    int idx = entry.key;
+                    var opt = entry.value;
+
+                    bool isSelected = selectedOptionIndex == idx;
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
                       child: SizedBox(
                         width: double.infinity, // 버튼 가로 꽉 채우기
                         child: OakeyButton(
                           text: opt['text'],
-                          type: OakeyButtonType.outline, // 기본은 아웃라인
+                          type: isSelected
+                              ? OakeyButtonType.primary
+                              : OakeyButtonType.outline,
                           size: OakeyButtonSize.large,
-                          // 버튼 스타일 커스텀: 텍스트 가운데 정렬 및 높이 확보
                           onPressed: () =>
-                              surveyCtrl.selectOption(opt['scores']),
+                              surveyCtrl.selectOption(idx, opt['scores']),
                         ),
                       ),
                     );
@@ -197,7 +203,7 @@ class SurveyScreen extends StatelessWidget {
 
                   const Spacer(flex: 2),
 
-                  // 이전 질문 버튼 (디자인 수정됨)
+                  // 이전 질문 버튼
                   if (currentIdx > 0)
                     TextButton.icon(
                       onPressed: () => surveyCtrl.prevQuestion(),
@@ -208,7 +214,7 @@ class SurveyScreen extends StatelessWidget {
                       ),
                       label: Text(
                         "이전 질문으로",
-                        style: OakeyTheme.textBodyS.copyWith(
+                        style: OakeyTheme.textBodyM.copyWith(
                           color: OakeyTheme.textHint,
                           fontWeight: FontWeight.w600,
                         ),

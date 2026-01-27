@@ -6,7 +6,6 @@ import '../../Directory/core/theme.dart';
 import '../../widgets/detail_app_bar.dart';
 import '../list/whisky_detail_screen.dart';
 import '../../models/whisky.dart';
-import '../../services/api_service.dart';
 import '../../controller/user_controller.dart';
 import '../../controller/whisky_controller.dart';
 
@@ -18,60 +17,15 @@ class LikedWhiskyScreen extends StatefulWidget {
 }
 
 class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
-  final WhiskyController controller = Get.find<WhiskyController>();
-
-  List<Map<String, dynamic>> likedWhiskies = [];
-  bool _isLoading = true;
+  // WhiskyController를 가져옵니다.
+  final WhiskyController controller = Get.put(WhiskyController());
 
   @override
   void initState() {
     super.initState();
-    _fetchLikedWhiskies();
-  }
-
-  Future<void> _fetchLikedWhiskies() async {
-    setState(() => _isLoading = true);
-
-    int currentUserId = 0;
-    try {
-      currentUserId = UserController.to.userId.value;
-    } catch (e) {
-      currentUserId = 0;
-    }
-
-    if (currentUserId == 0) {
-      setState(() => _isLoading = false);
-      return;
-    }
-
-    // 서버에서 찜 목록 가져오기
-    final list = await ApiService.fetchLikedWhiskies(currentUserId);
-
-    // 컨트롤러 데이터 로드 확인
+    // 화면 진입 시 데이터가 없다면 로드 시도
     if (controller.whiskies.isEmpty) {
-      await controller.loadData();
-    }
-
-    if (mounted) {
-      setState(() {
-        likedWhiskies = list.map((item) {
-          // 안전한 ID 파싱
-          final int safeId = int.tryParse(item['wsId']?.toString() ?? '0') ?? 0;
-
-          return {
-            'ws_id': safeId,
-            'ws_distillery': item['wsDistillery'] ?? '',
-            'ws_name': item['wsNameKo'] ?? '',
-            'ws_name_en': item['wsName'] ?? '',
-            'ws_category': item['wsCategory'] ?? '',
-            'ws_rating': item['wsRating'] ?? 0.0,
-            'is_liked': true,
-            'ws_image_url': item['wsImage'] ?? '',
-            'flavor_tags': item['tags'] ?? [],
-          };
-        }).toList();
-        _isLoading = false;
-      });
+      controller.loadData();
     }
   }
 
@@ -85,80 +39,60 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
           children: [
             const OakeyDetailAppBar(),
 
-            // 헤더 영역 (찜 갯수 표시)
+            // 헤더 영역 (Obx로 감싸서 갯수 실시간 반영)
             Obx(
               () => _buildHeader("내가 찜한 위스키", controller.likedWhiskyIds.length),
             ),
 
+            // 리스트 영역 (여기도 Obx로 감싸서 리스트 실시간 반영)
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: OakeyTheme.primaryDeep,
-                      ),
-                    )
-                  : likedWhiskies.isEmpty
-                  ? _buildEmptyState("찜한 위스키가 없습니다.")
-                  : RefreshIndicator(
-                      onRefresh: _fetchLikedWhiskies,
+              child: Obx(() {
+                // 1. 전체 위스키 목록이 로드되지 않았을 때
+                if (controller.whiskies.isEmpty && controller.isLoading.value) {
+                  return const Center(
+                    child: CircularProgressIndicator(
                       color: OakeyTheme.primaryDeep,
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 15,
-                        ),
-                        itemCount: likedWhiskies.length,
-                        itemBuilder: (context, index) {
-                          final item = likedWhiskies[index];
-                          final int wsId = item['ws_id'];
-
-                          return Obx(() {
-                            // 찜 해제 시 목록에서 즉시 숨김 처리
-                            bool isStillLiked = controller.isLiked(wsId);
-                            if (!isStillLiked) return const SizedBox.shrink();
-
-                            return _buildSimpleLikedCard(
-                              item: item,
-                              onTap: () async {
-                                // 상세 페이지 이동 및 데이터 로드
-                                Whisky? fullData;
-                                try {
-                                  fullData = controller.whiskies.firstWhere(
-                                    (w) => w.wsId == wsId,
-                                  );
-                                } catch (e) {
-                                  fullData = null;
-                                }
-
-                                // 데이터가 없으면 API 데이터로 임시 객체 생성
-                                fullData ??= Whisky.fromDbMap({
-                                  'wsId': item['ws_id'],
-                                  'wsName': item['ws_name_en'],
-                                  'wsNameKo': item['ws_name'],
-                                  'wsCategory': item['ws_category'],
-                                  'wsDistillery': item['ws_distillery'],
-                                  'wsImage': item['ws_image_url'],
-                                  'wsAbv': 0.0,
-                                  'wsAge': 0,
-                                  'wsRating': item['ws_rating'],
-                                  'wsVoteCnt': 0,
-                                  'tags': jsonEncode(item['flavor_tags']),
-                                  'tasteProfile': jsonEncode({}),
-                                });
-
-                                await Get.to(
-                                  () => WhiskyDetailScreen(whisky: fullData!),
-                                );
-                                _fetchLikedWhiskies(); // 돌아왔을 때 목록 갱신
-                              },
-                              onLikeTap: () async {
-                                await controller.toggleLike(wsId);
-                              },
-                            );
-                          });
-                        },
-                      ),
                     ),
+                  );
+                }
+
+                // 2. 컨트롤러의 likedWhiskyIds를 이용해 실제 위스키 객체 리스트를 만듦
+                // (최신순으로 보여주기 위해 reversed 사용)
+                final myLikedWhiskies = controller.whiskies
+                    .where((w) => controller.likedWhiskyIds.contains(w.wsId))
+                    .toList()
+                    .reversed
+                    .toList();
+
+                // 3. 찜한 위스키가 없을 때
+                if (myLikedWhiskies.isEmpty) {
+                  return _buildEmptyState("찜한 위스키가 없습니다.");
+                }
+
+                // 4. 리스트 출력
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 15,
+                  ),
+                  itemCount: myLikedWhiskies.length,
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final whisky = myLikedWhiskies[index];
+                    return _buildSimpleLikedCard(
+                      whisky: whisky,
+                      onTap: () {
+                        Get.to(() => WhiskyDetailScreen(whisky: whisky));
+                      },
+                      onLikeTap: () {
+                        // 여기서 찜 해제하면 리스트에서도 즉시 사라짐
+                        controller.toggleLike(whisky.wsId);
+                      },
+                    );
+                  },
+                );
+              }),
             ),
           ],
         ),
@@ -166,69 +100,96 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
     );
   }
 
-  // 심플 카드 위젯
+  // 카드 위젯 (Whisky 객체를 직접 받도록 수정)
   Widget _buildSimpleLikedCard({
-    required Map<String, dynamic> item,
+    required Whisky whisky,
     required VoidCallback onTap,
     required VoidCallback onLikeTap,
   }) {
-    final String wsNameKo = (item['ws_name'] ?? '이름 없음').toString();
-    final String wsNameEn = (item['ws_name_en'] ?? '').toString();
-    final String? imageUrl = item['ws_image_url'];
+    // 이미지 URL 처리
+    String imageUrl = whisky.wsImage ?? '';
+    if (imageUrl.isNotEmpty && imageUrl.startsWith('/')) {
+      imageUrl = 'http://10.0.2.2:8080$imageUrl';
+    }
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
-        // 테마의 카드 스타일 적용
         decoration: OakeyTheme.decoCard,
         child: Row(
           children: [
-            // 위스키 이미지
+            // 이미지 영역
             Container(
-              width: 70,
-              height: 70,
+              width: 90,
+              height: 100,
               alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
               decoration: OakeyTheme.decoTag.copyWith(
                 borderRadius: OakeyTheme.radiusS,
+                color: OakeyTheme.surfaceMuted.withOpacity(0.3),
               ),
-              child: imageUrl != null && imageUrl.isNotEmpty
+              child: imageUrl.isNotEmpty
                   ? ClipRRect(
-                      borderRadius: OakeyTheme.radiusS,
+                      borderRadius: OakeyTheme.radiusM,
                       child: Image.network(
                         imageUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(
+                        fit: BoxFit.contain,
+                        errorBuilder: (ctx, err, st) => const Icon(
                           Icons.liquor,
                           color: OakeyTheme.primarySoft,
-                          size: 32,
+                          size: 40,
                         ),
                       ),
                     )
                   : const Icon(
                       Icons.liquor,
                       color: OakeyTheme.primarySoft,
-                      size: 32,
+                      size: 40,
                     ),
             ),
             const SizedBox(width: 16),
 
-            // 위스키 정보 텍스트
+            // 정보 텍스트 영역
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ★ 카테고리 태그 (맨 위로 이동)
+                  if (whisky.wsCategory.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: OakeyTheme.primarySoft.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        whisky.wsCategory,
+                        style: OakeyTheme.textBodyS.copyWith(
+                          fontSize: 11,
+                          color: OakeyTheme.primaryDeep,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6), // 이름과의 간격
+                  ],
+
+                  // 한글 이름
                   Text(
-                    wsNameKo,
+                    whisky.wsNameKo.isNotEmpty ? whisky.wsNameKo : '이름 없음',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: OakeyTheme.textTitleM,
                   ),
-                  if (wsNameEn.isNotEmpty) ...[
+
+                  // 영문 이름
+                  if (whisky.wsName.isNotEmpty) ...[
                     const SizedBox(height: 4),
                     Text(
-                      wsNameEn,
+                      whisky.wsName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: OakeyTheme.textBodyS,
@@ -238,7 +199,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
               ),
             ),
 
-            // 찜하기(하트) 버튼
+            // 찜 버튼 (항상 빨간 하트)
             IconButton(
               onPressed: onLikeTap,
               icon: const Icon(Icons.favorite, color: Colors.red, size: 28),
@@ -249,7 +210,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
     );
   }
 
-  // 헤더 위젯 (제목 + 카운트)
+  // 헤더 위젯
   Widget _buildHeader(String title, int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),

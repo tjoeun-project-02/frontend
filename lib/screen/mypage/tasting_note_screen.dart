@@ -5,13 +5,29 @@ import '../../Directory/core/theme.dart';
 import '../../controller/tasting_note_controller.dart';
 import '../../widgets/detail_app_bar.dart';
 
-class TastingNoteScreen extends StatelessWidget {
+// 테이스팅 노트 메인 화면
+class TastingNoteScreen extends StatefulWidget {
   const TastingNoteScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final controller = Get.put(TastingNoteController());
+  State<TastingNoteScreen> createState() => _TastingNoteScreenState();
+}
 
+class _TastingNoteScreenState extends State<TastingNoteScreen> {
+  // 컨트롤러 주입
+  final controller = Get.put(TastingNoteController());
+
+  @override
+  void initState() {
+    super.initState();
+    // 화면 진입 시 데이터 초기화
+    if (Get.isRegistered<TastingNoteController>()) {
+      controller.fetchNotes();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: OakeyTheme.backgroundMain,
       body: SafeArea(
@@ -20,9 +36,10 @@ class TastingNoteScreen extends StatelessWidget {
           children: [
             const OakeyDetailAppBar(),
 
-            // 헤더 영역 (제목 + 갯수)
+            // 상단 타이틀 및 개수 표시
             Obx(() => _buildHeader("Tasting Notes", controller.notes.length)),
 
+            // 메인 리스트 영역
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
@@ -37,15 +54,22 @@ class TastingNoteScreen extends StatelessWidget {
                   return _buildEmptyState("작성된 노트가 없습니다.");
                 }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  itemCount: controller.notes.length,
-                  itemBuilder: (context, index) {
-                    return _buildNoteCard(context, controller, index);
+                // 당겨서 새로고침 기능 포함
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    await controller.fetchNotes();
                   },
+                  color: OakeyTheme.primaryDeep,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                    itemCount: controller.notes.length,
+                    itemBuilder: (context, index) {
+                      return _buildNoteCard(context, controller, index);
+                    },
+                  ),
                 );
               }),
             ),
@@ -55,7 +79,7 @@ class TastingNoteScreen extends StatelessWidget {
     );
   }
 
-  // 헤더 위젯 빌더
+  // 상단 헤더 위젯
   Widget _buildHeader(String title, int count) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 10),
@@ -82,7 +106,7 @@ class TastingNoteScreen extends StatelessWidget {
     );
   }
 
-  // 노트 카드 위젯 빌더
+  // 개별 노트 카드 위젯
   Widget _buildNoteCard(
     BuildContext context,
     TastingNoteController controller,
@@ -91,94 +115,113 @@ class TastingNoteScreen extends StatelessWidget {
     final data = controller.notes[index];
 
     return GestureDetector(
-      onTap: () => controller.goToDetail(data),
+      // 상세 화면 이동 및 복귀 시 목록 갱신 로직
+      onTap: () async {
+        await controller.goToDetail(data);
+        if (controller.initialized) {
+          await controller.fetchNotes();
+        }
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
-        // 테마의 카드 스타일 적용
+        padding: const EdgeInsets.all(16),
         decoration: OakeyTheme.decoCard,
-        child: Column(
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                // 위스키 이미지
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: OakeyTheme.surfaceMuted,
-                    borderRadius: OakeyTheme.radiusS,
-                  ),
-                  child: ClipRRect(
-                    borderRadius: OakeyTheme.radiusS,
-                    child: Image.network(
-                      data['wsImage'] ?? '',
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.liquor,
-                        color: OakeyTheme.primarySoft,
-                      ),
-                    ),
+            // 왼쪽 이미지 영역
+            Container(
+              width: 90,
+              height: 110,
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              decoration: BoxDecoration(
+                color: OakeyTheme.surfaceMuted.withOpacity(0.3),
+                borderRadius: OakeyTheme.radiusM,
+              ),
+              child: ClipRRect(
+                borderRadius: OakeyTheme.radiusM,
+                child: Image.network(
+                  data['wsImage'] ?? '',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(
+                    Icons.liquor,
+                    color: OakeyTheme.primarySoft,
+                    size: 40,
                   ),
                 ),
-                const SizedBox(width: 16),
+              ),
+            ),
 
-                // 위스키 이름 정보
-                Expanded(
-                  child: Column(
+            const SizedBox(width: 16),
+
+            // 오른쪽 텍스트 정보 영역
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 위스키 이름 및 삭제 버튼
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        data['wsNameKo'] ?? '',
-                        style: OakeyTheme.textBodyL.copyWith(
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              data['wsNameKo'] ?? '',
+                              style: OakeyTheme.textTitleM.copyWith(
+                                fontSize: 16,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              data['wsName'] ?? '',
+                              style: OakeyTheme.textBodyS.copyWith(
+                                color: OakeyTheme.textHint,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        data['wsName'] ?? '',
-                        style: OakeyTheme.textBodyS,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      // 삭제 아이콘 버튼
+                      GestureDetector(
+                        onTap: () => _showDeleteConfirmDialog(
+                          context,
+                          controller,
+                          data['commentId'],
+                          index,
+                        ),
+                        child: const Padding(
+                          padding: EdgeInsets.only(left: 8, bottom: 8),
+                          child: Icon(
+                            Icons.delete_outline_rounded,
+                            size: 20,
+                            color: OakeyTheme.statusError,
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
 
-                // 삭제 버튼
-                IconButton(
-                  icon: const Icon(
-                    Icons.delete_outline_rounded,
-                    color: OakeyTheme.statusError,
-                  ),
-                  onPressed: () => _showDeleteConfirmDialog(
-                    context,
-                    controller,
-                    data['commentId'],
-                    index,
-                  ),
-                ),
-              ],
-            ),
+                  const SizedBox(height: 12),
 
-            // 구분선 및 내용
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              child: Divider(
-                height: 1,
-                color: OakeyTheme.borderLine.withOpacity(0.5),
+                  // 노트 내용 미리보기
+                  Text(
+                    data['content'] ?? '',
+                    style: OakeyTheme.textBodyM.copyWith(
+                      height: 1.4,
+                      color: OakeyTheme.textMain.withOpacity(0.8),
+                    ),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
-            ),
-            Text(
-              data['content'] ?? '',
-              style: OakeyTheme.textBodyM.copyWith(height: 1.5),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),
@@ -186,7 +229,7 @@ class TastingNoteScreen extends StatelessWidget {
     );
   }
 
-  // 빈 화면 상태 위젯
+  // 데이터 없을 때 표시할 위젯
   Widget _buildEmptyState(String message) {
     return Center(
       child: Column(
@@ -207,7 +250,7 @@ class TastingNoteScreen extends StatelessWidget {
     );
   }
 
-  // 삭제 확인 다이얼로그
+  // 삭제 확인 팝업
   void _showDeleteConfirmDialog(
     BuildContext context,
     TastingNoteController controller,

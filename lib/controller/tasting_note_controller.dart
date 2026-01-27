@@ -28,7 +28,7 @@ class TastingNoteController extends GetxController {
   }
 
   // ID로 실제 위스키 데이터를 찾아서 이동
-  void goToDetail(Map<String, dynamic> noteData) {
+  Future<void> goToDetail(Map<String, dynamic> noteData) async {
     try {
       // 1. 노트 데이터에서 위스키 ID 추출
       int targetId = int.tryParse(noteData['wsId'].toString()) ?? 0;
@@ -43,7 +43,7 @@ class TastingNoteController extends GetxController {
       try {
         if (Get.isRegistered<WhiskyController>()) {
           final whiskyController = Get.find<WhiskyController>();
-          // 리스트에서 ID가 같은 첫 번째 요소 찾기
+
           realWhisky = whiskyController.whiskies.firstWhere(
             (w) => w.wsId == targetId,
             orElse: () => Whisky(
@@ -67,9 +67,8 @@ class TastingNoteController extends GetxController {
       }
 
       // 3. 찾은 객체(또는 임시 객체)를 가지고 상세 페이지로 이동
-      // (realWhisky가 null일 경우를 대비해 위 orElse에서 임시 객체를 생성했습니다)
       if (realWhisky != null) {
-        Get.to(() => WhiskyDetailScreen(whisky: realWhisky!));
+        await Get.to(() => WhiskyDetailScreen(whisky: realWhisky!));
       }
     } catch (e) {
       print("상세 이동 에러: $e");

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../Directory/core/theme.dart';
 
 class OakeyDetailAppBar extends StatelessWidget {
@@ -28,7 +29,8 @@ class OakeyDetailAppBar extends StatelessWidget {
                 color: OakeyTheme.primarySoft,
                 size: 24,
               ),
-              onPressed: () => Navigator.pop(context),
+              // onPressed: () => Navigator.pop(context),
+              onPressed: () => Get.back(),
             ),
           ),
           // 중앙 로고 텍스트

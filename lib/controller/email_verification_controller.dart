@@ -33,6 +33,8 @@ class EmailVerificationController extends GetxController {
       } else {
         Get.snackbar("오류", "서버 응답이 없거나 발송에 실패했습니다.");
       }
+    } on TimeoutException {
+      Get.snackbar("지연", "서버 응답이 늦어지고 있습니다. 잠시 후 다시 시도해주세요.");
     } catch (e) {
       Get.snackbar("에러", "네트워크 연결을 확인해주세요.");
     } finally {
@@ -43,17 +45,27 @@ class EmailVerificationController extends GetxController {
 
   // 번호 확인 버튼 클릭 시
   Future<void> requestVerifyCode(String email, String code) async {
-    isLoading.value = true;
-    bool isValid = await _service.verifyCode(email, code);
-
-    if (isValid) {
-      isVerified.value = true;
-      _timer?.cancel();
-      Get.snackbar("성공", "이메일 인증이 완료되었습니다.");
-    } else {
-      Get.snackbar("실패", "인증번호가 일치하지 않거나 만료되었습니다.");
+    if (code.trim().isEmpty) {
+      Get.snackbar("알림", "인증번호를 입력해주세요.");
+      return;
     }
-    isLoading.value = false;
+
+    try {
+      isLoading.value = true;
+      bool isValid = await _service.verifyCode(email, code);
+
+      if (isValid) {
+        isVerified.value = true;
+        _timer?.cancel();
+        Get.snackbar("성공", "이메일 인증이 완료되었습니다.");
+      } else {
+        Get.snackbar("실패", "인증번호가 일치하지 않거나 만료되었습니다.");
+      }
+    } catch (e) {
+      Get.snackbar("에러", "인증 확인 중 오류가 발생했습니다.");
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void startTimer() {
@@ -67,6 +79,7 @@ class EmailVerificationController extends GetxController {
       }
     });
   }
+
   void resetStatus() {
     isEmailSent.value = false;
     isVerified.value = false;
@@ -74,6 +87,7 @@ class EmailVerificationController extends GetxController {
     timerSeconds.value = 180;
     _timer?.cancel();
   }
+
   @override
   void onClose() {
     _timer?.cancel();
