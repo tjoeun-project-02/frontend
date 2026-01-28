@@ -200,9 +200,7 @@ class ResultScreen extends StatelessWidget {
 
   Widget _buildReasonSection(dynamic whisky) {
     final List<String> tags = List<String>.from(whisky['tags'] ?? []);
-    // ★ 에러 방지: 숫자가 문자열로 와도 처리되도록 수정
-    final int matchPercent =
-        int.tryParse(whisky['matchPercent'].toString()) ?? 95;
+    final matchPercent = whisky['matchPercent'] ?? 95;
 
     return Container(
       width: double.infinity,
@@ -232,7 +230,7 @@ class ResultScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
-                  "일치도 $matchPercent%",
+                  "일치도 $matchPercent",
                   style: OakeyTheme.textBodyS.copyWith(
                     fontSize: 11,
                     color: OakeyTheme.accentOrange,
@@ -249,7 +247,7 @@ class ResultScreen extends StatelessWidget {
             runSpacing: 8,
             children: tags.isEmpty
                 ? [const Text("-")]
-                : tags.take(4).map((tag) => _buildTagChip(tag)).toList(),
+                : tags.take(5).map((tag) => _buildTagChip(tag)).toList(),
           ),
         ],
       ),
@@ -258,7 +256,7 @@ class ResultScreen extends StatelessWidget {
 
   Widget _buildTagChip(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: OakeyTheme.surfacePure,
         borderRadius: BorderRadius.circular(20),

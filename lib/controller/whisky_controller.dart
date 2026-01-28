@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../Directory/core/theme.dart';
+import 'dart:math';
 import '../models/whisky.dart';
 import '../screen/ocr/ocr_result_screen.dart';
 import '../services/ocr_service.dart';
@@ -12,13 +13,17 @@ import '../services/whisky_service.dart';
 import '../services/db_helper.dart';
 import '../services/api_service.dart';
 import '../controller/user_controller.dart';
-import 'dart:math'; // 오늘의 추천 랜덤생성
 
 class WhiskyController extends GetxController {
   final WhiskyService _whiskyService = WhiskyService();
   final DBHelper _dbHelper = DBHelper();
 
+  // 화면에 표시될 위스키 리스트
   var whiskies = <Whisky>[].obs;
+
+  // DB에서 가져온 원본 전체 위스키 데이터
+  List<Whisky> _allSourceWhiskies = [];
+
   var isLoading = true.obs;
   var selectedFilters = <String>{}.obs;
 
@@ -27,15 +32,14 @@ class WhiskyController extends GetxController {
 
   final TextEditingController searchController = TextEditingController();
 
-  // 추천 위스키 데이터를 담을 리스트
+  // 추천 위스키 데이터 리스트
   RxList<Whisky> recommendedWhiskies = <Whisky>[].obs;
   // 추천된 카테고리 이름
   RxString recommendedCategory = ''.obs;
 
-  // 한글-영어 태그 매핑을 위한 사전
   final Map<String, String> _flavorDictionary = {};
 
-  // 영어 태그 원본 데이터
+  // 영어 태그 데이터
   final List<String> _engTags = [
     "fruity",
     "fruit",
@@ -153,7 +157,7 @@ class WhiskyController extends GetxController {
     "balanced",
   ];
 
-  // 한글 태그 매핑 데이터 (따옴표 통일 및 오타 수정함)
+  // 한글 태그 데이터
   final List<String> _korTags = [
     "과일향",
     "과일",
@@ -274,19 +278,23 @@ class WhiskyController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-
-    // 앱 시작 시 사전 만들기 실행
     _initializeFlavorMap();
 
-    loadData();
-    ever(whiskies, (_) {
-      if (whiskies.isNotEmpty && recommendedWhiskies.isEmpty) {
-        generateRandomRecommendations();
-      }
+    // 앱 시작 시 원본 데이터 로드
+    loadSourceData();
+
+    // 검색어 입력 시 실시간 필터링
+    searchController.addListener(() {
+      applyFilterAndSearch();
+    });
+
+    // 필터 변경 시 자동 필터링
+    ever(selectedFilters, (_) {
+      applyFilterAndSearch();
     });
   }
 
-  // 사전 생성 함수 (한글 -> 영어 매핑)
+  // 태그 사전 초기화
   void _initializeFlavorMap() {
     int length = min(_engTags.length, _korTags.length);
     for (int i = 0; i < length; i++) {
@@ -296,17 +304,21 @@ class WhiskyController extends GetxController {
     }
   }
 
-  // 랜덤 추천 로직
+  // 랜덤 추천 생성
   void generateRandomRecommendations() {
-    if (whiskies.isEmpty) return;
+    final sourceList = _allSourceWhiskies.isNotEmpty
+        ? _allSourceWhiskies
+        : whiskies;
+    if (sourceList.isEmpty) return;
+
     final random = Random();
-    final categories = whiskies.map((w) => w.wsCategory).toSet().toList();
+    final categories = sourceList.map((w) => w.wsCategory).toSet().toList();
 
     if (categories.isEmpty) return;
     final targetCategory = categories[random.nextInt(categories.length)];
     recommendedCategory.value = targetCategory;
 
-    final categoryWhiskies = whiskies
+    final categoryWhiskies = sourceList
         .where((w) => w.wsCategory == targetCategory)
         .toList();
 
@@ -314,111 +326,41 @@ class WhiskyController extends GetxController {
     recommendedWhiskies.assignAll(categoryWhiskies.take(3).toList());
   }
 
-  // 데이터 로드 (한글이름 + 영어이름 + ★태그 번역 검색 기능)
-  Future<void> loadData() async {
+  // DB에서 원본 데이터 로드 및 초기화
+  Future<void> loadSourceData() async {
     try {
       isLoading.value = true;
 
-      // 1. 전체 데이터 가져오기
-      List<Whisky> allWhiskies = await _dbHelper.getAllWhiskies();
+      // 로컬 DB 조회
+      List<Whisky> fetchedList = await _dbHelper.getAllWhiskies();
 
-      // 버전 체크 및 서버 동기화
+      // 서버 버전 체크 및 동기화
       int remoteVersion = await _whiskyService.fetchRemoteVersion();
       final prefs = await SharedPreferences.getInstance();
       int localVersion = prefs.getInt('whisky_db_version') ?? 0;
 
-      if (remoteVersion > localVersion || allWhiskies.isEmpty) {
+      if (remoteVersion > localVersion || fetchedList.isEmpty) {
         final serverData = await _whiskyService.fetchWhiskiesFromServer(0, 100);
         if (serverData.isNotEmpty) {
           await _dbHelper.clearAndInsertAll(serverData);
           await prefs.setInt('whisky_db_version', remoteVersion);
-          allWhiskies = serverData;
+          fetchedList = serverData;
         }
       }
 
-      // 2. 검색어와 필터 적용 로직
-      List<Whisky> resultList = [];
-      bool isSearchMode =
-          searchController.text.trim().isNotEmpty || selectedFilters.isNotEmpty;
+      // 원본 리스트 저장
+      _allSourceWhiskies = fetchedList;
 
-      if (isSearchMode) {
-        String keyword = searchController.text.trim();
-        String keywordLower = keyword.toLowerCase();
+      // 찜 목록 동기화
+      await _syncLikes();
 
-        // 검색어 확장 로직
-        // 사용자가 '사과'라고 검색하면 -> ["사과", "apple"] 리스트를 만듦
-        List<String> targetSearchTags = [];
-
-        // 1) 입력한 단어를 그대로 추가 (영어 검색 대비)
-        targetSearchTags.add(keywordLower);
-
-        // 2) 사전에서 한글 키워드 찾아서 영어 태그 추가
-        // 예: "달콤" 검색 시 -> "sweet" 추가
-        _flavorDictionary.forEach((korKey, engValue) {
-          if (korKey.contains(keyword) || keyword.contains(korKey)) {
-            targetSearchTags.add(engValue);
-          }
-        });
-
-        resultList = allWhiskies.where((whisky) {
-          // A. 검색어 매칭
-          bool matchKeyword = false;
-          if (keyword.isEmpty) {
-            matchKeyword = true;
-          } else {
-            // 1) 한글 이름 검색
-            bool matchKo = whisky.wsNameKo.contains(keyword);
-
-            // 2) 영어 이름 검색 (대소문자 무시)
-            bool matchEn = whisky.wsName.toLowerCase().contains(keywordLower);
-
-            // 3) 태그 검색 (확장된 targetSearchTags 중 하나라도 포함하는지)
-            // 위스키의 태그 리스트를 순회하며, 우리가 찾으려는 태그(한글or영어)가 있는지 확인
-            bool matchTag = whisky.tags.any((tag) {
-              String tagLower = tag.toLowerCase();
-              return targetSearchTags.any(
-                (target) => tagLower.contains(target),
-              );
-            });
-
-            // 셋 중 하나라도 맞으면 통과
-            matchKeyword = matchKo || matchEn || matchTag;
-          }
-
-          // B. 카테고리 필터 매칭
-          bool matchFilter = true;
-          if (selectedFilters.isNotEmpty) {
-            matchFilter = selectedFilters.contains(whisky.wsCategory);
-          }
-
-          return matchKeyword && matchFilter;
-        }).toList();
-      } else {
-        resultList = allWhiskies;
+      // 추천 데이터 생성
+      if (_allSourceWhiskies.isNotEmpty && recommendedWhiskies.isEmpty) {
+        generateRandomRecommendations();
       }
 
-      // 3. 찜 목록 동기화
-      int currentUserId = 0;
-      try {
-        currentUserId = UserController.to.userId.value;
-      } catch (e) {
-        currentUserId = 0;
-      }
-
-      if (currentUserId > 0) {
-        Set<int> serverLikes = await ApiService.fetchLikedWhiskyIds(
-          currentUserId,
-        );
-        likedWhiskyIds.assignAll(serverLikes);
-
-        for (var whisky in resultList) {
-          whisky.isLiked = likedWhiskyIds.contains(whisky.wsId);
-        }
-      } else {
-        likedWhiskyIds.clear();
-      }
-
-      whiskies.assignAll(resultList);
+      // 초기 필터링 적용
+      applyFilterAndSearch();
     } catch (e) {
       print("데이터 로드 에러: $e");
     } finally {
@@ -426,7 +368,116 @@ class WhiskyController extends GetxController {
     }
   }
 
-  // 좋아요 토글
+  // 찜 목록 서버 동기화
+  Future<void> _syncLikes() async {
+    int currentUserId = 0;
+    try {
+      currentUserId = UserController.to.userId.value;
+    } catch (e) {
+      currentUserId = 0;
+    }
+
+    if (currentUserId > 0) {
+      Set<int> serverLikes = await ApiService.fetchLikedWhiskyIds(
+        currentUserId,
+      );
+      likedWhiskyIds.assignAll(serverLikes);
+    } else {
+      likedWhiskyIds.clear();
+    }
+  }
+
+  // 검색어와 필터를 동시 적용하여 리스트 갱신 (태그는 OR 조건)
+  // [수정] 검색어 + 카테고리 + 태그 복합 필터링
+  void applyFilterAndSearch() {
+    String keyword = searchController.text.trim();
+    String keywordLower = keyword.toLowerCase();
+
+    // 1. 검색어 확장 (기존 로직 유지)
+    List<String> targetSearchTags = [];
+    if (keyword.isNotEmpty) {
+      targetSearchTags.add(keywordLower);
+      _flavorDictionary.forEach((korKey, engValue) {
+        if (korKey.contains(keyword) || keyword.contains(korKey)) {
+          targetSearchTags.add(engValue);
+        }
+      });
+    }
+
+    // 2. [핵심 수정] 선택된 필터를 '카테고리'와 '태그'로 안전하게 분리하기
+    List<String> activeCategoryFilters = [];
+    List<String> activeTagFilters = [];
+
+    // 우리가 알고 있는 카테고리 목록 (여기에 포함되면 카테고리로 분류)
+    // 데이터베이스에 저장된 카테고리명과 정확히 일치해야 합니다.
+    final List<String> knownCategories = [
+      'Single Malt',
+      'Blended',
+      'Bourbon',
+      'Japanese',
+      'Rye',
+      'Irish',
+      'Tennessee',
+      'Canadian',
+    ];
+
+    for (String filter in selectedFilters) {
+      // A. 한국어 태그인 경우 -> 영어 태그로 변환
+      if (_flavorDictionary.containsKey(filter)) {
+        activeTagFilters.add(_flavorDictionary[filter]!);
+      }
+      // B. 카테고리 목록에 있는 경우 -> 카테고리 필터로 분류
+      else if (knownCategories.contains(filter)) {
+        activeCategoryFilters.add(filter);
+      }
+      // C. 그 외 (Peat Smoke, Honey 등 영어 단어) -> 전부 '태그'로 간주!
+      else {
+        activeTagFilters.add(filter.toLowerCase());
+      }
+    }
+
+    // 3. 필터링 수행
+    List<Whisky> result = _allSourceWhiskies.where((whisky) {
+      // A. 검색어 조건
+      bool matchSearch = true;
+      if (keyword.isNotEmpty) {
+        bool matchKo = whisky.wsNameKo.contains(keyword);
+        bool matchEn = whisky.wsName.toLowerCase().contains(keywordLower);
+        bool matchTag = whisky.tags.any((tag) {
+          String tagLower = tag.toLowerCase();
+          return targetSearchTags.any((target) => tagLower.contains(target));
+        });
+        matchSearch = matchKo || matchEn || matchTag;
+      }
+
+      // B. 카테고리 필터 조건
+      bool matchCategory = true;
+      if (activeCategoryFilters.isNotEmpty) {
+        matchCategory = activeCategoryFilters.contains(whisky.wsCategory);
+      }
+
+      // C. 태그 필터 조건 (OR 조건: 하나라도 포함되면 통과)
+      bool matchTagFilter = true;
+      if (activeTagFilters.isNotEmpty) {
+        matchTagFilter = whisky.tags.any((t) {
+          String tagLower = t.toLowerCase();
+          // 내 태그(tagLower) 안에 필터 단어(filter)가 포함되어 있는지 확인
+          return activeTagFilters.any((filter) => tagLower.contains(filter));
+        });
+      }
+
+      return matchSearch && matchCategory && matchTagFilter;
+    }).toList();
+
+    // 찜 상태 반영
+    for (var whisky in result) {
+      whisky.isLiked = likedWhiskyIds.contains(whisky.wsId);
+    }
+
+    whiskies.assignAll(result);
+  }
+
+  // 좋아요 토글 기능
   Future<void> toggleLike(int wsId) async {
     int currentUserId = 0;
     try {
@@ -446,7 +497,6 @@ class WhiskyController extends GetxController {
       return;
     }
 
-    // 1. UI 즉시 반영
     bool isOriginallyLiked = likedWhiskyIds.contains(wsId);
     if (isOriginallyLiked) {
       likedWhiskyIds.remove(wsId);
@@ -460,36 +510,26 @@ class WhiskyController extends GetxController {
       whiskies.refresh();
     }
 
-    // 2. 서버 요청
     bool success = await ApiService.toggleLike(wsId, currentUserId);
 
-    // 3. 실패 시 롤백
     if (!success) {
-      print("❌ 좋아요 서버 저장 실패! 롤백합니다.");
-
-      if (isOriginallyLiked) {
+      if (isOriginallyLiked)
         likedWhiskyIds.add(wsId);
-      } else {
+      else
         likedWhiskyIds.remove(wsId);
-      }
 
       if (index != -1) {
         whiskies[index].isLiked = isOriginallyLiked;
         whiskies.refresh();
       }
-
-      Get.snackbar(
-        "저장 실패",
-        "서버 문제로 좋아요가 반영되지 않았습니다.",
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Colors.redAccent,
-        colorText: Colors.white,
-      );
+      Get.snackbar("실패", "서버 오류로 좋아요가 반영되지 않았습니다.");
     }
   }
 
+  // 찜 여부 확인
   bool isLiked(int wsId) => likedWhiskyIds.contains(wsId);
 
+  // 필터 토글 기능
   void toggleFilter(
     String filter, {
     bool isSingleSelect = false,
@@ -509,7 +549,6 @@ class WhiskyController extends GetxController {
         selectedFilters.add(filter);
       }
     }
-    loadData();
   }
 
   Future<void> startOcrProcess() async {
@@ -527,7 +566,10 @@ class WhiskyController extends GetxController {
     if (photo == null) return;
 
     // 3. 로딩 및 서버 통신
-    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+    Get.dialog(
+      const Center(child: CircularProgressIndicator()),
+      barrierDismissible: false,
+    );
 
     try {
       final result = await OcrService.uploadWhiskyImage(File(photo.path));
@@ -544,7 +586,7 @@ class WhiskyController extends GetxController {
     }
   }
 
-// BottomSheet 위젯 분리 (Controller 내부 혹은 별도 유틸)
+  // BottomSheet 위젯 분리 (Controller 내부 혹은 별도 유틸)
   Widget _buildOcrSourceSheet() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -555,12 +597,18 @@ class WhiskyController extends GetxController {
       child: Wrap(
         children: [
           ListTile(
-            leading: const Icon(Icons.camera_alt, color: OakeyTheme.primaryDeep),
+            leading: const Icon(
+              Icons.camera_alt,
+              color: OakeyTheme.primaryDeep,
+            ),
             title: const Text('직접 촬영하기'),
             onTap: () => Get.back(result: ImageSource.camera),
           ),
           ListTile(
-            leading: const Icon(Icons.photo_library, color: OakeyTheme.primaryDeep),
+            leading: const Icon(
+              Icons.photo_library,
+              color: OakeyTheme.primaryDeep,
+            ),
             title: const Text('갤러리에서 가져오기'),
             onTap: () => Get.back(result: ImageSource.gallery),
           ),

@@ -24,14 +24,14 @@ class WhiskyListScreen extends StatelessWidget {
   ];
 
   final List<String> flavorFilterOptions = [
-    'Honey',
-    'Vanilla',
-    'Peat Smoke',
-    'Sherry',
-    'Smoky',
-    'Spicy',
-    'Fruit',
-    'Medicinal',
+    'honey',
+    'vanilla',
+    'peat Smoke',
+    'sherry',
+    'smoky',
+    'spicy',
+    'fruit',
+    'medicinal',
   ];
 
   @override
@@ -45,9 +45,9 @@ class WhiskyListScreen extends StatelessWidget {
             // 검색바 위젯
             OakeySearchBar(
               controller: controller.searchController,
-              onSubmitted: (_) => controller.loadData(),
+              onSubmitted: (_) => controller.loadSourceData(),
               onChanged: (val) {
-                if (val.isEmpty) controller.loadData();
+                if (val.isEmpty) controller.loadSourceData();
               },
               onCameraTap: () => controller.startOcrProcess(),
             ),
@@ -71,7 +71,7 @@ class WhiskyListScreen extends StatelessWidget {
                 }
 
                 return RefreshIndicator(
-                  onRefresh: () => controller.loadData(),
+                  onRefresh: () => controller.loadSourceData(),
                   color: OakeyTheme.primaryDeep,
                   child: ListView.builder(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -245,7 +245,7 @@ class WhiskyListScreen extends StatelessWidget {
           GestureDetector(
             onTap: () {
               controller.selectedFilters.remove(label);
-              controller.loadData();
+              controller.loadSourceData();
             },
             child: Icon(
               Icons.close,
@@ -406,7 +406,7 @@ class WhiskyListScreen extends StatelessWidget {
             child: OakeyButton(
               onPressed: () {
                 Get.back();
-                controller.loadData();
+                controller.loadSourceData();
               },
               type: OakeyButtonType.primary,
               size: OakeyButtonSize.large,

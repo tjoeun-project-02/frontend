@@ -93,7 +93,7 @@ class MainScreen extends StatelessWidget {
             controller: whiskyController.searchController,
             hintText: '위스키 이름이나 맛을 검색해보세요',
             onSubmitted: (value) {
-              whiskyController.loadData();
+              whiskyController.loadSourceData();
               homeController.changeTabIndex(1);
               },
             onCameraTap: () => whiskyController.startOcrProcess(),
@@ -194,7 +194,7 @@ class MainScreen extends StatelessWidget {
                   // 칩 클릭 시 재검색 로직 (기존 동일)
                   whiskyController.searchController.text = tag;
                   homeController.addRecentSearch(tag);
-                  whiskyController.loadData();
+                  whiskyController.loadSourceData();
                   homeController.changeTabIndex(1);
                 },
               ),

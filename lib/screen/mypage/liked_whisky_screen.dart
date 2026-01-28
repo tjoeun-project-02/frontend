@@ -25,7 +25,7 @@ class _LikedWhiskyScreenState extends State<LikedWhiskyScreen> {
     super.initState();
     // 화면 진입 시 데이터가 없다면 로드 시도
     if (controller.whiskies.isEmpty) {
-      controller.loadData();
+      controller.loadSourceData();
     }
   }
 
