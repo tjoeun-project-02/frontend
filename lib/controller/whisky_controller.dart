@@ -27,6 +27,8 @@ class WhiskyController extends GetxController {
   var isLoading = true.obs;
   var selectedFilters = <String>{}.obs;
 
+  var currentActiveTags = <String>{}.obs;
+
   // 내가 찜한 위스키 ID 목록
   var likedWhiskyIds = <int>{}.obs;
 
@@ -34,10 +36,144 @@ class WhiskyController extends GetxController {
 
   // 추천 위스키 데이터 리스트
   RxList<Whisky> recommendedWhiskies = <Whisky>[].obs;
+
   // 추천된 카테고리 이름
   RxString recommendedCategory = ''.obs;
 
   final Map<String, String> _flavorDictionary = {};
+
+  final Map<String, List<String>> flavorGroups = {
+    "과일/상큼": [
+      "fruity",
+      "fruit",
+      "apple",
+      "pear",
+      "citrus",
+      "lemon",
+      "orange",
+      "grape",
+      "berry",
+      "cherry",
+      "plum",
+      "peach",
+      "apricot",
+      "banana",
+      "pineapple",
+      "mango",
+      "tropical",
+      "dried fruit",
+      "raisin",
+      "fig",
+      "date",
+      "sultana",
+      "prune",
+    ],
+    "달콤/바닐라": [
+      "sweet",
+      "honey",
+      "vanilla",
+      "caramel",
+      "toffee",
+      "butterscotch",
+      "chocolate",
+      "cocoa",
+      "sugar",
+      "syrup",
+      "maple",
+      "candy",
+      "cream",
+      "custard",
+      "butter",
+      "cake",
+      "biscuit",
+    ],
+    "스모키/피트": [
+      "peaty",
+      "peat",
+      "smoke",
+      "smoky",
+      "ash",
+      "bonfire",
+      "charcoal",
+      "tar",
+      "iodine",
+      "medicinal",
+      "seaweed",
+      "salt",
+      "brine",
+      "maritime",
+    ],
+    "스파이시/강렬": [
+      "spicy",
+      "spice",
+      "pepper",
+      "cinnamon",
+      "ginger",
+      "clove",
+      "nutmeg",
+      "anise",
+      "licorice",
+      "mint",
+      "herbal",
+    ],
+    "견과류/고소": [
+      "nutty",
+      "nut",
+      "almond",
+      "walnut",
+      "hazelnut",
+      "pecan",
+      "malty",
+      "malt",
+      "grain",
+      "cereal",
+      "barley",
+      "bread",
+      "toast",
+      "yeast",
+      "dough",
+    ],
+    "우디/오크": [
+      "woody",
+      "oak",
+      "wood",
+      "pine",
+      "cedar",
+      "sawdust",
+      "tannin",
+      "dry",
+    ],
+    "꽃/허브": [
+      "floral",
+      "flower",
+      "rose",
+      "heather",
+      "grass",
+      "hay",
+      "straw",
+      "leaf",
+      "tea",
+      "tobacco",
+    ],
+    "풍부함/숙성": [
+      "sherry",
+      "bourbon",
+      "port",
+      "rum",
+      "wine",
+      "cask",
+      "finish",
+      "rich",
+      "smooth",
+      "complex",
+      "balanced",
+      "leather",
+      "wax",
+      "oil",
+      "earthy",
+      "mushroom",
+    ],
+  };
 
   // 영어 태그 데이터
   final List<String> _engTags = [
@@ -388,12 +524,11 @@ class WhiskyController extends GetxController {
   }
 
   // 검색어와 필터를 동시 적용하여 리스트 갱신 (태그는 OR 조건)
-  // [수정] 검색어 + 카테고리 + 태그 복합 필터링
   void applyFilterAndSearch() {
     String keyword = searchController.text.trim();
     String keywordLower = keyword.toLowerCase();
 
-    // 1. 검색어 확장 (기존 로직 유지)
+    // 1. 검색어 확장
     List<String> targetSearchTags = [];
     if (keyword.isNotEmpty) {
       targetSearchTags.add(keywordLower);
@@ -408,33 +543,26 @@ class WhiskyController extends GetxController {
     List<String> activeCategoryFilters = [];
     List<String> activeTagFilters = [];
 
-    // 우리가 알고 있는 카테고리 목록 (여기에 포함되면 카테고리로 분류)
-    // 데이터베이스에 저장된 카테고리명과 정확히 일치해야 합니다.
     final List<String> knownCategories = [
       'Single Malt',
       'Blended',
       'Bourbon',
       'Japanese',
-      'Rye',
-      'Irish',
-      'Tennessee',
-      'Canadian',
     ];
 
     for (String filter in selectedFilters) {
-      // A. 한국어 태그인 경우 -> 영어 태그로 변환
-      if (_flavorDictionary.containsKey(filter)) {
-        activeTagFilters.add(_flavorDictionary[filter]!);
-      }
-      // B. 카테고리 목록에 있는 경우 -> 카테고리 필터로 분류
-      else if (knownCategories.contains(filter)) {
+      if (flavorGroups.containsKey(filter)) {
+        activeTagFilters.addAll(flavorGroups[filter]!);
+      } else if (knownCategories.contains(filter)) {
         activeCategoryFilters.add(filter);
-      }
-      // C. 그 외 (Peat Smoke, Honey 등 영어 단어) -> 전부 '태그'로 간주!
-      else {
+      } else if (_flavorDictionary.containsKey(filter)) {
+        activeTagFilters.add(_flavorDictionary[filter]!);
+      } else {
         activeTagFilters.add(filter.toLowerCase());
       }
     }
+
+    currentActiveTags.assignAll({...activeTagFilters, ...targetSearchTags});
 
     // 3. 필터링 수행
     List<Whisky> result = _allSourceWhiskies.where((whisky) {
@@ -468,6 +596,8 @@ class WhiskyController extends GetxController {
 
       return matchSearch && matchCategory && matchTagFilter;
     }).toList();
+
+    result.sort((a, b) => b.wsRating.compareTo(a.wsRating));
 
     // 찜 상태 반영
     for (var whisky in result) {

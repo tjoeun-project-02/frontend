@@ -136,7 +136,7 @@ class MainScreen extends StatelessWidget {
               () => Text(
                 whiskyController.recommendedCategory.value.isEmpty
                     ? "당신의 밤을 채워줄 특별한 한 잔"
-                    : '${whiskyController.recommendedCategory.value} 의 깊은 매력에 빠져보세요',
+                    : '${whiskyController.recommendedCategory.value} 는 어때요?',
                 style: OakeyTheme.textTitleM,
               ),
             ),

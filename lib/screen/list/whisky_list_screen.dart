@@ -19,19 +19,17 @@ class WhiskyListScreen extends StatelessWidget {
     'Blended',
     'Bourbon',
     'Japanese',
-    'Rye',
-    'Irish',
   ];
 
   final List<String> flavorFilterOptions = [
-    'honey',
-    'vanilla',
-    'peat Smoke',
-    'sherry',
-    'smoky',
-    'spicy',
-    'fruit',
-    'medicinal',
+    "과일/상큼",
+    "달콤/바닐라",
+    "스모키/피트",
+    "스파이시/강렬",
+    "견과류/고소",
+    "우디/오크",
+    "꽃/허브",
+    "풍부함/숙성",
   ];
 
   @override
@@ -45,10 +43,8 @@ class WhiskyListScreen extends StatelessWidget {
             // 검색바 위젯
             OakeySearchBar(
               controller: controller.searchController,
-              onSubmitted: (_) => controller.loadSourceData(),
-              onChanged: (val) {
-                if (val.isEmpty) controller.loadSourceData();
-              },
+              onSubmitted: (_) => FocusScope.of(context).unfocus(),
+              onChanged: (val) {},
               onCameraTap: () => controller.startOcrProcess(),
             ),
 
@@ -94,7 +90,7 @@ class WhiskyListScreen extends StatelessWidget {
                             'ws_image_url': item.wsImage,
                             'flavor_tags': item.tags.take(3).toList(),
                           },
-                          highlightFilters: controller.selectedFilters,
+                          highlightFilters: controller.currentActiveTags,
                           isFavorite: isLiked,
                           onTap: () =>
                               Get.to(() => WhiskyDetailScreen(whisky: item)),
@@ -406,7 +402,6 @@ class WhiskyListScreen extends StatelessWidget {
             child: OakeyButton(
               onPressed: () {
                 Get.back();
-                controller.loadSourceData();
               },
               type: OakeyButtonType.primary,
               size: OakeyButtonSize.large,

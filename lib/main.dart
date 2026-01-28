@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:frontend/screen/auth/login_screen.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'controller/user_controller.dart';
 import 'screen/main/splash_screen.dart'; // 스플래시 화면
-import 'screen/main/main_screen.dart';
-import 'screen/ocr/ocr_result_screen.dart';
 import 'Directory/core/theme.dart';
 import 'package:get/get.dart';
 
