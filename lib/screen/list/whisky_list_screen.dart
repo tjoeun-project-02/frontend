@@ -49,6 +49,7 @@ class WhiskyListScreen extends StatelessWidget {
               onChanged: (val) {
                 if (val.isEmpty) controller.loadData();
               },
+              onCameraTap: () => controller.startOcrProcess(),
             ),
 
             // 상단 필터 영역

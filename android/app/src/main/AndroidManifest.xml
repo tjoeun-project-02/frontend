@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!--카메라 권한-->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <application
         android:label="Oakey"
         android:name="${applicationName}"
@@ -45,6 +49,7 @@
         <meta-data
             android:name="com.kakao.sdk.nativeAppKey"
             android:value="0bde666bf0a38023c8529fd07ba7d3a2" />
+
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

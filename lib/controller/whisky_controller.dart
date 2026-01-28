@@ -1,7 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../Directory/core/theme.dart';
 import '../models/whisky.dart';
+import '../screen/ocr/ocr_result_screen.dart';
+import '../services/ocr_service.dart';
 import '../services/whisky_service.dart';
 import '../services/db_helper.dart';
 import '../services/api_service.dart';
@@ -504,5 +510,62 @@ class WhiskyController extends GetxController {
       }
     }
     loadData();
+  }
+
+  Future<void> startOcrProcess() async {
+    final ImagePicker picker = ImagePicker();
+
+    // 1. 하단 시트(BottomSheet)를 띄워 소스 선택
+    final ImageSource? source = await Get.bottomSheet<ImageSource>(
+      _buildOcrSourceSheet(),
+    );
+
+    if (source == null) return;
+
+    // 2. 이미지 피킹
+    final XFile? photo = await picker.pickImage(source: source);
+    if (photo == null) return;
+
+    // 3. 로딩 및 서버 통신
+    Get.dialog(const Center(child: CircularProgressIndicator()), barrierDismissible: false);
+
+    try {
+      final result = await OcrService.uploadWhiskyImage(File(photo.path));
+      Get.back(); // 로딩 종료
+
+      if (result != null && result['spring_top3'] != null) {
+        Get.to(() => OcrResultScreen(results: result['spring_top3']));
+      } else {
+        OakeyTheme.showToast("실패", "위스키를 인식하지 못했습니다.", isError: true);
+      }
+    } catch (e) {
+      Get.back();
+      OakeyTheme.showToast("에러", "서버 연결에 실패했습니다.", isError: true);
+    }
+  }
+
+// BottomSheet 위젯 분리 (Controller 내부 혹은 별도 유틸)
+  Widget _buildOcrSourceSheet() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Wrap(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.camera_alt, color: OakeyTheme.primaryDeep),
+            title: const Text('직접 촬영하기'),
+            onTap: () => Get.back(result: ImageSource.camera),
+          ),
+          ListTile(
+            leading: const Icon(Icons.photo_library, color: OakeyTheme.primaryDeep),
+            title: const Text('갤러리에서 가져오기'),
+            onTap: () => Get.back(result: ImageSource.gallery),
+          ),
+        ],
+      ),
+    );
   }
 }

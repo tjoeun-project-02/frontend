@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../Directory/core/theme.dart';
 import '../../controller/home_controller.dart';
@@ -7,12 +10,14 @@ import '../../controller/survey_controller.dart';
 import '../../controller/user_controller.dart';
 import '../../controller/whisky_controller.dart';
 
+import '../../services/ocr_service.dart';
 import '../../widgets/bottom_bar.dart';
 import '../../widgets/search_bar.dart';
 
 import '../list/whisky_list_screen.dart';
 import '../list/whisky_detail_screen.dart';
 import '../mypage/mypage_screen.dart';
+import '../ocr/ocr_result_screen.dart';
 import '../recommend/survey_screen.dart';
 import 'guide_screen.dart';
 // import '../../models/whisky.dart';
@@ -90,10 +95,8 @@ class MainScreen extends StatelessWidget {
             onSubmitted: (value) {
               whiskyController.loadData();
               homeController.changeTabIndex(1);
-            },
-            onCameraTap: () {
-              print("카메라 버튼 클릭");
-            },
+              },
+            onCameraTap: () => whiskyController.startOcrProcess(),
           ),
 
           OakeyTheme.boxV_S,
