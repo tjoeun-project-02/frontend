@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:frontend/controller/home_controller.dart';
+import 'package:frontend/controller/whisky_controller.dart';
 import 'package:frontend/screen/list/whisky_list_screen.dart';
 import 'package:get/get.dart';
 import '../../Directory/core/theme.dart';
 import '../list/whisky_detail_screen.dart';
 import '../../models/whisky.dart';
+import '../main/main_screen.dart';
 // import '../main/main_screen.dart';
 
 class OcrResultScreen extends StatelessWidget {
   final List<dynamic> results; // FastAPI에서 받은 데이터
-
-  const OcrResultScreen({super.key, required this.results});
+  final WhiskyController controller = WhiskyController();
+  OcrResultScreen({super.key, required this.results});
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +94,7 @@ class OcrResultScreen extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.back();
+                        controller.startOcrProcess();
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF0EAE5),
@@ -118,7 +121,9 @@ class OcrResultScreen extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        Get.offAll(() => WhiskyListScreen());
+                        Get.offAll(() => MainScreen());
+                        Get.put(HomeController());
+                        Get.find<HomeController>().changeTabIndex(1);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: OakeyTheme.primaryDeep,

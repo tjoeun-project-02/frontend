@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:get/get.dart';
@@ -386,6 +388,24 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
                           color: OakeyTheme.primarySoft,
                         ),
                 ),
+
+                if (imageUrl != null && imageUrl.isNotEmpty)
+                Positioned(
+                  left: 10,
+                  bottom: 10,
+                  child: GestureDetector(
+                    onTap: () => _showFullScreenImage(context, imageUrl),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      child: const Icon(
+                        Icons.zoom_in_rounded, // +가 들어간 돋보기 아이콘
+                        color: OakeyTheme.primaryDeep,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                ),
+                
                 Positioned(
                   right: 0,
                   top: 0,
@@ -445,6 +465,75 @@ class _WhiskyDetailScreenState extends State<WhiskyDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showFullScreenImage(BuildContext context, String imageUrl) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: '',
+      // [수정] 배경을 조금 더 진하게(0.8) 설정하여 몰입감을 줍니다.
+      barrierColor: Colors.black.withOpacity(0.8),
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (context, anim1, anim2) {
+        // BackdropFilter를 제거하고 바로 GestureDetector로 시작합니다.
+        return GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Center(
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.85,
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.of(context).size.height * 0.75,
+              ),
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: OakeyTheme.radiusL,
+                // 블러가 없으므로 그림자를 살짝 더 부드럽게 조정했습니다.
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 30,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 상단 닫기 버튼
+                  Align(
+                    alignment: Alignment.topRight,
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                          Icons.close_rounded,
+                          color: OakeyTheme.textHint,
+                          size: 28
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 이미지 영역 (Expanded로 세로 길이를 꽉 채움)
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: OakeyTheme.radiusM,
+                      child: Image.network(
+                        imageUrl,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.center,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
